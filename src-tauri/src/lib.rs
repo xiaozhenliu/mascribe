@@ -2,6 +2,7 @@ mod audio;
 mod commands;
 mod config;
 mod correction;
+pub mod hotkey;
 mod insertion;
 mod permissions;
 mod polishing;
@@ -119,6 +120,7 @@ pub fn run() {
         last_result: Mutex::new(String::new()),
         polishing_engine,
         config: Mutex::new(config),
+        native_hotkey: Mutex::new(None),
     };
 
     tauri::Builder::default()
@@ -133,6 +135,8 @@ pub fn run() {
             commands::hide_window,
             commands::get_config,
             commands::save_config,
+            commands::register_native_hotkey,
+            commands::unregister_native_hotkey,
         ])
         .setup(|app| {
             // Hide from Dock — app lives only in menu bar

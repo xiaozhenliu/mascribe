@@ -286,19 +286,41 @@ async function toggleRecording() {
 // ── Hotkey registration ──
 
 let currentShortcut: string | null = null;
+let usingNativeHotkey = false; // true when CGEventTap fallback is active
 
 async function registerShortcut(shortcut: string) {
-  // Unregister previous shortcut if any
+  // Unregister previous shortcut (whichever system was active)
   if (currentShortcut) {
     try {
-      await unregister(currentShortcut);
+      if (usingNativeHotkey) {
+        await invoke("unregister_native_hotkey");
+      } else {
+        await unregister(currentShortcut);
+      }
     } catch { /* may not be registered */ }
+    usingNativeHotkey = false;
   }
-  await register(shortcut, (event) => {
-    if (event.state === "Pressed") toggleRecording();
-  });
-  currentShortcut = shortcut;
-  console.log(`[main] registered shortcut: ${shortcut}`);
+
+  // Try tauri-plugin-global-shortcut first (handles standard combos like Alt+Space)
+  try {
+    await register(shortcut, (event) => {
+      if (event.state === "Pressed") toggleRecording();
+    });
+    currentShortcut = shortcut;
+    console.log(`[main] registered shortcut via global-shortcut: ${shortcut}`);
+  } catch (e) {
+    // global-shortcut doesn't support this key — fall back to native CGEventTap
+    console.warn(`[main] global-shortcut failed for "${shortcut}": ${e}, trying native listener`);
+    try {
+      await invoke("register_native_hotkey", { key: shortcut });
+      usingNativeHotkey = true;
+      currentShortcut = shortcut;
+      console.log(`[main] registered shortcut via native CGEventTap: ${shortcut}`);
+    } catch (e2) {
+      console.error(`[main] native hotkey also failed for "${shortcut}": ${e2}`);
+      throw e2;
+    }
+  }
 }
 
 // ── Init ──
@@ -317,8 +339,13 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   await registerShortcut(shortcut);
 
-  // Listen for config changes (from Settings window) and re-register hotkey
+  // Listen for native CGEventTap hotkey presses (fallback for unsupported keys)
   const { listen } = await import("@tauri-apps/api/event");
+  await listen("native-hotkey-pressed", () => {
+    toggleRecording();
+  });
+
+  // Listen for config changes (from Settings window) and re-register hotkey
   await listen("config-changed", async () => {
     try {
       const config = await invoke("get_config") as { shortcut: string };

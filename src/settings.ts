@@ -47,6 +47,7 @@ function mapKey(event: KeyboardEvent): string | null {
   // Special keys
   if (key === " ") return "Space";
   if (key === "Escape") return null; // cancel recording
+  if (key === "ContextMenu") return "ContextMenu"; // Windows keyboard menu key
   if (key.startsWith("Arrow")) return key; // ArrowUp, ArrowLeft, etc.
   if (key.startsWith("F") && key.length >= 2 && key.length <= 3) return key; // F1-F12
 
@@ -109,6 +110,11 @@ function setupShortcutRecorder() {
 
     input.value = parts.join("+");
     input.blur();
+  });
+
+  // Prevent context menu popup when recording ContextMenu key
+  input.addEventListener("contextmenu", (e) => {
+    if (isListening) e.preventDefault();
   });
 
   shortcutClear().addEventListener("click", () => {

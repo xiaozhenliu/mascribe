@@ -2,6 +2,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::audio::capture::AudioCapture;
 use crate::config::AppConfig;
+use crate::hotkey;
 use crate::polishing::online::OnlinePolisher;
 use crate::state::AppState;
 
@@ -242,4 +243,56 @@ pub fn stop_recording_and_transcribe(
     let _ = app.emit("transcription-complete", &polished);
 
     Ok(polished)
+}
+
+// ── Native hotkey commands (CGEventTap fallback for unsupported keys) ──
+
+#[tauri::command]
+pub fn register_native_hotkey(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    key: String,
+) -> Result<(), String> {
+    println!("[native_hotkey] registering key: {}", key);
+
+    // Stop any existing native hotkey listener first
+    {
+        let mut handle = state
+            .native_hotkey
+            .lock()
+            .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        if handle.is_some() {
+            println!("[native_hotkey] stopping previous listener");
+            *handle = None; // Drop stops the CGEventTap
+        }
+    }
+
+    let app_clone = app.clone();
+    let new_handle = hotkey::start_native_listener(&key, move || {
+        let _ = app_clone.emit("native-hotkey-pressed", ());
+    })?;
+
+    {
+        let mut handle = state
+            .native_hotkey
+            .lock()
+            .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        *handle = Some(new_handle);
+    }
+
+    println!("[native_hotkey] listener started for: {}", key);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unregister_native_hotkey(state: State<'_, AppState>) -> Result<(), String> {
+    let mut handle = state
+        .native_hotkey
+        .lock()
+        .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+    if handle.is_some() {
+        println!("[native_hotkey] stopping listener");
+        *handle = None; // Drop stops the CGEventTap
+    }
+    Ok(())
 }
