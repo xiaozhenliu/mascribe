@@ -13,8 +13,13 @@ static ACTIVE_STREAM: std::sync::Mutex<StreamHolder> =
 
 #[tauri::command]
 pub fn start_recording(state: State<'_, AppState>) -> Result<(), String> {
-    let stream = AudioCapture::start(&state.audio_buffer).map_err(|e| e.to_string())?;
+    println!("[start_recording] called");
+    let stream = AudioCapture::start(&state.audio_buffer).map_err(|e| {
+        println!("[start_recording] ERROR: {}", e);
+        e.to_string()
+    })?;
     ACTIVE_STREAM.lock().unwrap().0 = Some(stream);
+    println!("[start_recording] stream started OK");
     Ok(())
 }
 
@@ -23,11 +28,16 @@ pub fn stop_recording_and_transcribe(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
+    println!("[stop_and_transcribe] called");
     // 1. Stop recording — drop the stream
     {
         let mut holder = ACTIVE_STREAM.lock().unwrap();
+        let had_stream = holder.0.is_some();
         drop(holder.0.take());
+        println!("[stop_and_transcribe] stream dropped (had_stream={})", had_stream);
     }
+    // Small delay to ensure last audio callback completes
+    std::thread::sleep(std::time::Duration::from_millis(50));
     let (samples, sample_rate) = AudioCapture::stop(&state.audio_buffer);
 
     // 2. Check minimum duration (300ms)
@@ -57,9 +67,11 @@ pub fn stop_recording_and_transcribe(
             .recognition_engine
             .lock()
             .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        println!("[transcribe] sending {} samples at {}Hz to SenseVoice", samples_16k.len(), target_rate);
         let (text, _lang) = engine
             .transcribe(target_rate, &samples_16k)
             .map_err(|e: anyhow::Error| e.to_string())?;
+        println!("[transcribe] result: '{}' (lang={})", text, _lang);
         text
     };
 
