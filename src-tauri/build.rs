@@ -4,5 +4,8 @@ fn main() {
     // Also look in the same directory as the binary (for dev/testing)
     println!("cargo:rustc-link-arg=-Wl,-rpath,@executable_path");
 
+    // Link AVFoundation so AVCaptureDevice is available for microphone permission requests
+    println!("cargo:rustc-link-lib=framework=AVFoundation");
+
     tauri_build::build()
 }

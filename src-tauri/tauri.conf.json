@@ -20,8 +20,10 @@
         "height": 48,
         "decorations": false,
         "alwaysOnTop": true,
+        "focusable": false,
         "transparent": true,
-        "resizable": false
+        "resizable": false,
+        "visible": false
       }
     ],
     "security": {
@@ -39,6 +41,8 @@
       "icons/icon.ico"
     ],
     "macOS": {
+      "signingIdentity": "VoiceInput Dev",
+      "entitlements": "Entitlements.plist",
       "frameworks": [
         "target/release/libonnxruntime.1.17.1.dylib",
         "target/release/libsherpa-onnx-c-api.dylib",

@@ -40,8 +40,11 @@ impl AudioCapture {
             .default_input_device()
             .ok_or_else(|| anyhow::anyhow!("No input device found"))?;
 
+        println!("[audio] Input device: {:?}", device.name().unwrap_or_default());
+
         let config = device.default_input_config()?;
         let sample_rate = config.sample_rate().0;
+        println!("[audio] Sample rate: {}Hz, channels: {}", sample_rate, config.channels());
         *buffer.sample_rate.lock().unwrap() = sample_rate;
 
         let data = buffer.data.clone();
@@ -97,6 +100,24 @@ impl AudioCapture {
             buf.clone()
         };
         let sr = *buffer.sample_rate.lock().unwrap();
+        // Diagnostic: check if we got real audio or silence
+        let max_abs = samples.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
+        let rms = if samples.is_empty() {
+            0.0
+        } else {
+            (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt()
+        };
+        println!(
+            "[audio] Stopped: {} samples, {}Hz, duration={:.1}s, max_abs={:.6}, rms={:.6}",
+            samples.len(),
+            sr,
+            if sr > 0 { samples.len() as f64 / sr as f64 } else { 0.0 },
+            max_abs,
+            rms
+        );
+        if max_abs == 0.0 {
+            eprintln!("[audio] WARNING: All samples are zero! Microphone permission may be denied.");
+        }
         (samples, sr)
     }
 }

@@ -1,7 +1,23 @@
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::audio::capture::AudioCapture;
 use crate::state::AppState;
+
+#[tauri::command]
+pub fn show_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.show().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn hide_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
 
 #[tauri::command]
 pub fn get_amplitude(state: State<'_, AppState>) -> f32 {
