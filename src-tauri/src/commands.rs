@@ -111,8 +111,38 @@ pub fn stop_recording_and_transcribe(
     // 6. Apply corrections
     let corrected = state.correction_dict.apply(&text);
 
+    // 6.5. AI polishing (optional — skipped if LLM not loaded)
+    let polished = if let Some(ref engine_mutex) = state.polishing_engine {
+        match engine_mutex.lock() {
+            Ok(engine) => {
+                println!("[polish] polishing text: '{}'", corrected);
+                let start = std::time::Instant::now();
+                match engine.polish(&corrected) {
+                    Ok(result) => {
+                        println!(
+                            "[polish] result: '{}' ({:.1}s)",
+                            result,
+                            start.elapsed().as_secs_f64()
+                        );
+                        result
+                    }
+                    Err(e) => {
+                        println!("[polish] ERROR: {}, using unpolished text", e);
+                        corrected.clone()
+                    }
+                }
+            }
+            Err(e) => {
+                println!("[polish] lock error: {}, using unpolished text", e);
+                corrected.clone()
+            }
+        }
+    } else {
+        corrected.clone()
+    };
+
     // 7. Insert text into active app
-    crate::insertion::clipboard::insert_text(&corrected).map_err(|e: anyhow::Error| e.to_string())?;
+    crate::insertion::clipboard::insert_text(&polished).map_err(|e: anyhow::Error| e.to_string())?;
 
     // 8. Update last result and emit event
     {
@@ -120,9 +150,9 @@ pub fn stop_recording_and_transcribe(
             .last_result
             .lock()
             .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
-        *last = corrected.clone();
+        *last = polished.clone();
     }
-    let _ = app.emit("transcription-complete", &corrected);
+    let _ = app.emit("transcription-complete", &polished);
 
-    Ok(corrected)
+    Ok(polished)
 }

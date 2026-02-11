@@ -4,6 +4,7 @@ mod config;
 mod correction;
 mod insertion;
 mod permissions;
+mod polishing;
 mod recognition;
 mod state;
 mod tray;
@@ -11,6 +12,7 @@ mod tray;
 use audio::capture::AudioBuffer;
 use config::AppConfig;
 use correction::dictionary::CorrectionDictionary;
+use polishing::engine::PolishingEngine;
 use recognition::engine::RecognitionEngine;
 use state::AppState;
 use std::sync::Mutex;
@@ -87,11 +89,35 @@ pub fn run() {
         CorrectionDictionary::empty()
     });
 
+    // Load polishing LLM (optional — if model not present, polishing is skipped)
+    let polishing_engine = if config.polish_enabled {
+        match PolishingEngine::new(&config.polish_model_path, 99) {
+            Ok(engine) => {
+                println!(
+                    "[VoiceInput] Polishing LLM loaded from: {}",
+                    config.polish_model_path
+                );
+                Some(Mutex::new(engine))
+            }
+            Err(e) => {
+                println!(
+                    "[VoiceInput] Polishing LLM not available ({}), polishing disabled",
+                    e
+                );
+                None
+            }
+        }
+    } else {
+        println!("[VoiceInput] Polishing disabled in config");
+        None
+    };
+
     let app_state = AppState {
         recognition_engine: Mutex::new(engine),
         audio_buffer: AudioBuffer::new(),
         correction_dict,
         last_result: Mutex::new(String::new()),
+        polishing_engine,
     };
 
     tauri::Builder::default()

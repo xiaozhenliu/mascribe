@@ -43,6 +43,7 @@
     "macOS": {
       "signingIdentity": "VoiceInput Dev",
       "entitlements": "Entitlements.plist",
+      "minimumSystemVersion": "11.0",
       "frameworks": [
         "target/release/libonnxruntime.1.17.1.dylib",
         "target/release/libsherpa-onnx-c-api.dylib",
