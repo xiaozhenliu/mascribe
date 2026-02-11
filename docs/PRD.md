@@ -90,7 +90,16 @@ macOS 自带的语音听写功能依赖网络且准确率有限，特别是对�
 - AI 后处理开关（v2，暂时灰置显示"即将推出"）
 - 调试模式开关
 
-### 7. 纠错词典
+### 7. 录音保存与重试
+
+- 每次录音结束后，先将原始音频保存为 WAV 文件，再进行转写
+- WAV 文件保存位置：`~/Library/Application Support/com.mac-voice-input/recordings/`
+- 文件命名格式：`recording-YYYYMMDD-HHmmss.wav`（时间戳精确到秒）
+- 保存原始采样率（48kHz），未经重采样的完整音频
+- 目的：转写出错时可重试，也可用于后续分析和调试
+- 自动清理策略（v2）：保留最近 N 天或最大 M 份录音
+
+### 8. 纠错词典
 
 - 基于简单字符串替换的纠错系统
 - JSON 格式存储，可手动编辑
@@ -201,6 +210,8 @@ macOS 自带的语音听写功能依赖网络且准确率有限，特别是对�
 | tokio | 异步运行时 |
 | dirs | 系统目录 |
 | anyhow | 错误处理 |
+| hound | WAV 文件读写 |
+| chrono | 时间戳生成 |
 
 **Frontend (package.json)**:
 | Package | 用途 |
@@ -223,6 +234,7 @@ macOS 自带的语音听写功能依赖网络且准确率有限，特别是对�
   → CGEventTap 检测按键松开
   → 停止 cpal 输入流，获取完整音频缓冲区
   → 校验时长（< 300ms 则丢弃）
+  → 将原始音频保存为 WAV 文件（recording-YYYYMMDD-HHmmss.wav）
   → tokio::spawn_blocking:
     1. 如采样率非 16kHz，进行重采样
     2. sherpa-rs SenseVoiceRecognizer.transcribe(16000, &samples)
@@ -266,7 +278,8 @@ mac-voice-input/
 │   │   ├── audio/
 │   │   │   ├── mod.rs
 │   │   │   ├── capture.rs       # cpal 麦克风采集
-│   │   │   └── resampler.rs     # 重采样到 16kHz
+│   │   │   ├── resampler.rs     # 重采样到 16kHz
+│   │   │   └── wav_save.rs      # 录音保存为 WAV 文件
 │   │   ├── hotkey/
 │   │   │   ├── mod.rs
 │   │   │   └── listener.rs      # CGEventTap 快捷键监听

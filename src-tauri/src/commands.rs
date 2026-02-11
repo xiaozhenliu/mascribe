@@ -3,6 +3,11 @@ use tauri::{AppHandle, Emitter, State};
 use crate::audio::capture::AudioCapture;
 use crate::state::AppState;
 
+#[tauri::command]
+pub fn get_amplitude(state: State<'_, AppState>) -> f32 {
+    state.audio_buffer.get_amplitude()
+}
+
 /// Wrapper to allow cpal::Stream in a static Mutex.
 /// Safety: We only access this from Tauri command handlers which are serialized.
 struct StreamHolder(Option<cpal::Stream>);
@@ -50,7 +55,19 @@ pub fn stop_recording_and_transcribe(
         return Err("Recording too short".to_string());
     }
 
-    // 3. Resample to 16kHz (SenseVoice expects 16kHz)
+    // 3. Save raw audio to WAV before any processing
+    {
+        let recordings_dir = dirs::data_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("com.mac-voice-input")
+            .join("recordings");
+        match crate::audio::wav_save::save_wav(&samples, sample_rate, &recordings_dir) {
+            Ok(path) => println!("[stop_and_transcribe] saved WAV: {}", path.display()),
+            Err(e) => println!("[stop_and_transcribe] WARNING: failed to save WAV: {}", e),
+        }
+    }
+
+    // 4. Resample to 16kHz (SenseVoice expects 16kHz)
     let target_rate = 16000u32;
     let samples_16k = if sample_rate != target_rate {
         println!("Resampling from {}Hz to {}Hz ({} -> {} samples)",
@@ -61,7 +78,7 @@ pub fn stop_recording_and_transcribe(
         samples
     };
 
-    // 4. Transcribe
+    // 5. Transcribe
     let text = {
         let mut engine = state
             .recognition_engine
@@ -75,13 +92,13 @@ pub fn stop_recording_and_transcribe(
         text
     };
 
-    // 5. Apply corrections
+    // 6. Apply corrections
     let corrected = state.correction_dict.apply(&text);
 
-    // 6. Insert text into active app
+    // 7. Insert text into active app
     crate::insertion::clipboard::insert_text(&corrected).map_err(|e: anyhow::Error| e.to_string())?;
 
-    // 7. Update last result and emit event
+    // 8. Update last result and emit event
     {
         let mut last = state
             .last_result

@@ -12,6 +12,7 @@ use correction::dictionary::CorrectionDictionary;
 use recognition::engine::RecognitionEngine;
 use state::AppState;
 use std::sync::Mutex;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -48,7 +49,27 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::start_recording,
             commands::stop_recording_and_transcribe,
+            commands::get_amplitude,
         ])
+        .setup(|app| {
+            // Position window at bottom-center, just above the Dock
+            if let Some(window) = app.get_webview_window("main") {
+                if let Some(monitor) = window.current_monitor().ok().flatten() {
+                    let screen = monitor.size();
+                    let scale = monitor.scale_factor();
+                    let win_w = 220.0;
+                    let win_h = 48.0;
+                    let x = (screen.width as f64 / scale - win_w) / 2.0;
+                    // ~90px above bottom edge (Dock is typically ~70px)
+                    let y = screen.height as f64 / scale - win_h - 90.0;
+                    let _ = window.set_position(tauri::PhysicalPosition::new(
+                        (x * scale) as i32,
+                        (y * scale) as i32,
+                    ));
+                }
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

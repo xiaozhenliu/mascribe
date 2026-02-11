@@ -8,12 +8,10 @@
     <script type="module" src="/src/main.ts" defer></script>
   </head>
   <body>
-    <main class="container">
-      <div id="status-row">
-        <span id="status-dot" class="status-dot"></span>
-        <span id="status-text">Ready — Press Cmd+Shift+Space</span>
-      </div>
-      <div id="result"></div>
+    <main class="pill" data-tauri-drag-region>
+      <span id="status-dot" class="dot"></span>
+      <canvas id="waveform" width="120" height="24"></canvas>
+      <span id="status-label" class="label"></span>
     </main>
   </body>
 </html>

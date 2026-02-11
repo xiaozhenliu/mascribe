@@ -1,6 +1,6 @@
 [package]
 name = "mac-voice-input"
-version = "0.1.0"
+version = "0.2.0"
 description = "macOS voice input tool with local SenseVoice transcription"
 authors = ["you"]
 edition = "2021"
@@ -24,4 +24,6 @@ core-graphics = "0.24"
 core-foundation = "0.10"
 anyhow = "1"
 dirs = "5"
+hound = "3.5"
 log = "0.4"
+chrono = "0.4"
