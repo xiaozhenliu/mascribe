@@ -35,29 +35,41 @@ pub fn stop_recording_and_transcribe(
         return Err("No audio recorded".to_string());
     }
     let duration_ms = (samples.len() as f64 / sample_rate as f64 * 1000.0) as u64;
+    println!("Audio: {} samples, {}Hz, {}ms", samples.len(), sample_rate, duration_ms);
     if duration_ms < 300 {
         return Err("Recording too short".to_string());
     }
 
-    // 3. Transcribe
+    // 3. Resample to 16kHz (SenseVoice expects 16kHz)
+    let target_rate = 16000u32;
+    let samples_16k = if sample_rate != target_rate {
+        println!("Resampling from {}Hz to {}Hz ({} -> {} samples)",
+            sample_rate, target_rate, samples.len(),
+            (samples.len() as f64 * target_rate as f64 / sample_rate as f64) as usize);
+        crate::audio::resample::resample(&samples, sample_rate, target_rate)
+    } else {
+        samples
+    };
+
+    // 4. Transcribe
     let text = {
         let mut engine = state
             .recognition_engine
             .lock()
             .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
         let (text, _lang) = engine
-            .transcribe(sample_rate, &samples)
+            .transcribe(target_rate, &samples_16k)
             .map_err(|e: anyhow::Error| e.to_string())?;
         text
     };
 
-    // 4. Apply corrections
+    // 5. Apply corrections
     let corrected = state.correction_dict.apply(&text);
 
-    // 5. Insert text into active app
+    // 6. Insert text into active app
     crate::insertion::clipboard::insert_text(&corrected).map_err(|e: anyhow::Error| e.to_string())?;
 
-    // 6. Update last result and emit event
+    // 7. Update last result and emit event
     {
         let mut last = state
             .last_result
