@@ -18,6 +18,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 - **Universal paste** — Works in any macOS app (Chrome, VS Code, WeChat, etc.)
 - **Configurable hotkey** — Set any key or combo; supports special keys like ContextMenu via presets
 - **Correction dictionary** — Auto-fix common transcription errors with customizable JSON rules
+- **Launch at Login** — Optional autostart via macOS Login Items, toggled from tray menu
 - **Minimal UI** — Floating panel with ECG waveform indicator, or hide to menu bar only
 
 ---
@@ -30,6 +31,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 - **通用粘贴** — 适用于任何 macOS 应用
 - **自定义快捷键** — 支持任意单键或组合键，特殊键（如 ContextMenu）可通过预设选择
 - **纠错词典** — 自定义 JSON 规则自动修正常见识别错误
+- **开机启动** — 可选登录时自动启动，在托盘菜单中切换
 - **极简 UI** — 悬浮面板 + ECG 波形动画，或仅菜单栏图标
 
 ## Requirements / 系统要求
