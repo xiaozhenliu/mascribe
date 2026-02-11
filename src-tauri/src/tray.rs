@@ -1,9 +1,19 @@
 use tauri::image::Image;
-use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{ActivationPolicy, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_autostart::ManagerExt;
 
 pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    // Check current autostart state
+    let autostart_manager = app.autolaunch();
+    let is_autostart = autostart_manager.is_enabled().unwrap_or(false);
+
+    let launch_at_login = CheckMenuItemBuilder::new("Launch at Login")
+        .id("launch-at-login")
+        .checked(is_autostart)
+        .build(app)?;
+
     let settings_item = MenuItemBuilder::new("Settings...")
         .id("settings")
         .build(app)?;
@@ -12,8 +22,10 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
         .id("quit")
         .build(app)?;
 
+    let separator = PredefinedMenuItem::separator(app)?;
+
     let menu = MenuBuilder::new(app)
-        .items(&[&settings_item, &quit_item])
+        .items(&[&launch_at_login, &separator, &settings_item, &quit_item])
         .build()?;
 
     // Use dedicated tray icon (black outline, transparent background)
@@ -27,6 +39,17 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
         .icon_as_template(true) // Adapts to macOS light/dark menu bar
         .menu(&menu)
         .on_menu_event(|app, event| match event.id().as_ref() {
+            "launch-at-login" => {
+                let manager = app.autolaunch();
+                let currently_enabled = manager.is_enabled().unwrap_or(false);
+                if currently_enabled {
+                    let _ = manager.disable();
+                    println!("[tray] Autostart disabled");
+                } else {
+                    let _ = manager.enable();
+                    println!("[tray] Autostart enabled");
+                }
+            }
             "settings" => {
                 println!("[tray] Settings selected");
 
