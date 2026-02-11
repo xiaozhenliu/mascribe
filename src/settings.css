@@ -1,0 +1,284 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #1d1d1f;
+  background: #f5f5f7;
+}
+
+body {
+  padding: 24px;
+}
+
+.settings-container {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+/* ── Field sections ── */
+.field {
+  margin-bottom: 20px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #1d1d1f;
+}
+
+.field .hint {
+  font-size: 11px;
+  color: #86868b;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.field .hint code {
+  background: #e8e8ed;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: "SF Mono", "Menlo", monospace;
+}
+
+/* ── Radio group ── */
+.radio-group {
+  display: flex;
+  gap: 0;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.radio-label {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 7px 10px;
+  border-right: 1px solid #d2d2d7;
+  transition: background 0.15s, color 0.15s;
+  color: #6e6e73;
+}
+
+.radio-label:last-child {
+  border-right: none;
+}
+
+.radio-label input[type="radio"] {
+  display: none;
+}
+
+.radio-label:has(input:checked) {
+  background: #0071e3;
+  color: #fff;
+}
+
+.radio-label:hover:not(:has(input:checked)) {
+  background: #f0f0f5;
+}
+
+/* ── API settings ── */
+.api-settings {
+  padding: 12px;
+  background: #fafafa;
+  border: 1px solid #e8e8ed;
+  border-radius: 8px;
+}
+
+.api-settings > label {
+  display: none;
+}
+
+.api-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.api-field:last-child {
+  margin-bottom: 0;
+}
+
+.api-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6e6e73;
+  width: 64px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.api-field input {
+  flex: 1;
+}
+
+/* ── Hidden utility ── */
+.hidden {
+  display: none !important;
+}
+
+/* ── Inputs ── */
+input[type="text"],
+textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+textarea {
+  resize: vertical;
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  min-height: 120px;
+}
+
+/* ── Shortcut input ── */
+.shortcut-row {
+  display: flex;
+  gap: 8px;
+}
+
+.shortcut-input {
+  flex: 1;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.shortcut-input:focus {
+  border-color: #ff9f0a;
+  box-shadow: 0 0 0 3px rgba(255, 159, 10, 0.2);
+}
+
+.shortcut-input.recording {
+  border-color: #ff3b30;
+  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.2);
+  animation: pulse-border 1s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.2); }
+  50% { box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.4); }
+}
+
+/* ── Path row ── */
+.path-row {
+  display: flex;
+  gap: 8px;
+}
+
+.path-input {
+  flex: 1;
+}
+
+/* ── Buttons ── */
+.btn-small {
+  padding: 8px 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.btn-small:hover {
+  background: #e8e8ed;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid #e8e8ed;
+}
+
+.btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn.primary {
+  background: #0071e3;
+  color: #fff;
+}
+
+.btn.primary:hover {
+  background: #0077ed;
+}
+
+.btn.secondary {
+  background: #e8e8ed;
+  color: #1d1d1f;
+}
+
+.btn.secondary:hover {
+  background: #d2d2d7;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.toast.success {
+  background: #34c759;
+}
+
+.toast.error {
+  background: #ff3b30;
+}
+
+.toast.visible {
+  opacity: 1;
+}

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/settings.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voice Input Settings</title>
+    <script type="module" src="/src/settings.ts" defer></script>
+  </head>
+  <body>
+    <div class="settings-container">
+      <h1>Settings</h1>
+
+      <!-- Shortcut -->
+      <section class="field">
+        <label for="shortcut">Global Shortcut</label>
+        <p class="hint">Click the box below and press your desired key combination</p>
+        <div class="shortcut-row">
+          <input
+            type="text"
+            id="shortcut"
+            class="shortcut-input"
+            readonly
+            placeholder="Click and press keys..."
+          />
+          <button id="shortcut-clear" class="btn-small" title="Reset to default">Reset</button>
+        </div>
+      </section>
+
+      <!-- Recordings directory -->
+      <section class="field">
+        <label for="recordings-dir">Recordings Directory</label>
+        <p class="hint">Where WAV recordings of each speech input are saved</p>
+        <div class="path-row">
+          <input type="text" id="recordings-dir" class="path-input" />
+          <button id="browse-btn" class="btn-small">Browse...</button>
+        </div>
+      </section>
+
+      <!-- AI Polishing Engine -->
+      <section class="field">
+        <label>AI Polishing Engine</label>
+        <p class="hint">Choose how transcribed text is polished after speech recognition</p>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="polish-mode" value="disabled" />
+            <span>Off</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="polish-mode" value="local" />
+            <span>Local Model</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="polish-mode" value="api" />
+            <span>Online API</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Online API settings (shown only when "api" is selected) -->
+      <section id="api-settings" class="field api-settings hidden">
+        <label>Online API Settings</label>
+        <p class="hint">OpenAI-compatible endpoint (Step-Fun, DeepSeek, Qwen-Turbo, Groq, etc.)</p>
+        <div class="api-field">
+          <span class="api-label">Endpoint</span>
+          <input type="text" id="api-endpoint" placeholder="https://api.stepfun.com/v1" />
+        </div>
+        <div class="api-field">
+          <span class="api-label">API Key</span>
+          <input type="password" id="api-key" placeholder="sk-..." />
+        </div>
+        <div class="api-field">
+          <span class="api-label">Model</span>
+          <input type="text" id="api-model" placeholder="step-1-flash" />
+        </div>
+      </section>
+
+      <!-- Polish prompt -->
+      <section id="polish-prompt-section" class="field hidden">
+        <label for="polish-prompt">AI Polish Prompt</label>
+        <p class="hint">
+          Template for text post-processing.
+          Use <code>{text}</code> for transcribed text and <code>{lang}</code> for detected language.
+        </p>
+        <textarea id="polish-prompt" rows="8"></textarea>
+      </section>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button id="btn-cancel" class="btn secondary">Cancel</button>
+        <button id="btn-save" class="btn primary">Save</button>
+      </div>
+    </div>
+  </body>
+</html>

@@ -9,14 +9,25 @@ use std::path::Path;
 
 const MAX_GENERATION_TOKENS: usize = 512;
 
+/// Chat template format for different model families.
+#[derive(Debug, Clone, Copy)]
+enum ChatFormat {
+    /// Gemma 3: <start_of_turn>user\n...<end_of_turn>\n<start_of_turn>model\n
+    Gemma,
+    /// ChatML (Qwen, Yi, etc.): <|im_start|>user\n...<|im_end|>\n<|im_start|>assistant\n
+    ChatML,
+}
+
 pub struct PolishingEngine {
     backend: LlamaBackend,
     model: LlamaModel,
+    chat_format: ChatFormat,
 }
 
 impl PolishingEngine {
     /// Load a GGUF model for text polishing.
     /// `n_gpu_layers`: number of layers to offload to GPU (99 = all layers on Apple Silicon).
+    /// Auto-detects chat format from model filename.
     pub fn new(model_path: &str, n_gpu_layers: u32) -> anyhow::Result<Self> {
         let path = Path::new(model_path);
         if !path.exists() {
@@ -31,26 +42,44 @@ impl PolishingEngine {
         let model = LlamaModel::load_from_file(&backend, path, &model_params)
             .map_err(|e| anyhow::anyhow!("Failed to load polishing model: {}", e))?;
 
+        // Auto-detect chat format from filename
+        let lower_path = model_path.to_lowercase();
+        let chat_format = if lower_path.contains("qwen") || lower_path.contains("yi-") {
+            ChatFormat::ChatML
+        } else {
+            ChatFormat::Gemma
+        };
+
         println!(
-            "[PolishingEngine] Model loaded from: {} (vocab={})",
+            "[PolishingEngine] Model loaded: {} (vocab={}, format={:?})",
             model_path,
-            model.n_vocab()
+            model.n_vocab(),
+            chat_format
         );
 
-        Ok(Self { backend, model })
+        Ok(Self {
+            backend,
+            model,
+            chat_format,
+        })
     }
 
     /// Polish transcribed text by fixing punctuation, grammar, and capitalization.
-    /// Returns the polished text, or the original text if polishing fails.
-    pub fn polish(&self, text: &str) -> anyhow::Result<String> {
+    /// If `custom_prompt` is provided, it should contain `{text}` as a placeholder.
+    /// `detected_lang` is the language code from SenseVoice (e.g. "zh", "en", "ja").
+    pub fn polish(
+        &self,
+        text: &str,
+        custom_prompt: Option<&str>,
+        detected_lang: Option<&str>,
+    ) -> anyhow::Result<String> {
         if text.trim().is_empty() {
             return Ok(text.to_string());
         }
 
-        let prompt = build_prompt(text);
+        let prompt = build_prompt(text, custom_prompt, detected_lang, self.chat_format);
 
         // Create a fresh context for each inference call.
-        // Context creation is fast (~2ms) and avoids KV cache management complexity.
         let ctx_params = LlamaContextParams::default()
             .with_n_ctx(NonZeroU32::new(1024))
             .with_n_threads(4)
@@ -69,10 +98,11 @@ impl PolishingEngine {
             .map_err(|e| anyhow::anyhow!("Tokenization failed: {}", e))?;
 
         println!(
-            "[polish] prompt: {} tokens, input: '{}' ({} chars)",
+            "[polish:local] {} tokens, input: '{}' ({} chars, {:?})",
             tokens.len(),
             text,
-            text.len()
+            text.len(),
+            self.chat_format
         );
 
         // Feed prompt tokens into batch
@@ -81,16 +111,13 @@ impl PolishingEngine {
             .add_sequence(&tokens, 0, false)
             .map_err(|e| anyhow::anyhow!("Batch add failed: {}", e))?;
 
-        // Enable logits for the last token only (needed for sampling)
-        // add_sequence with logits_all=false already does this
-
         // Decode the prompt (prefill)
         ctx.decode(&mut batch)
             .map_err(|e| anyhow::anyhow!("Prompt decode failed: {}", e))?;
 
-        // Setup sampler: low temperature (near-greedy) for deterministic, faithful output
+        // Setup sampler: low temperature for deterministic output
         let mut sampler = LlamaSampler::chain_simple([
-            LlamaSampler::temp(0.1),
+            LlamaSampler::temp(0.15),
             LlamaSampler::greedy(),
         ]);
 
@@ -100,24 +127,20 @@ impl PolishingEngine {
         let mut decoder = encoding_rs::UTF_8.new_decoder();
 
         for _ in 0..MAX_GENERATION_TOKENS {
-            // Sample next token
             let token = sampler.sample(&ctx, -1);
 
-            // Check for end of generation
             if self.model.is_eog_token(token) {
                 break;
             }
 
-            // Convert token to string piece
             match self.model.token_to_piece(token, &mut decoder, true, None) {
                 Ok(piece) => output.push_str(&piece),
                 Err(e) => {
-                    println!("[polish] token_to_piece error: {}, stopping", e);
+                    println!("[polish:local] token_to_piece error: {}, stopping", e);
                     break;
                 }
             }
 
-            // Prepare next decode step
             batch.clear();
             batch
                 .add(token, n_decoded as i32, &[0], true)
@@ -132,37 +155,122 @@ impl PolishingEngine {
     }
 }
 
-/// Build the Gemma 3 chat-format prompt for text polishing.
-fn build_prompt(text: &str) -> String {
-    format!(
-        "<start_of_turn>user\n\
-         You are a text post-processor for speech-to-text output. \
-         Fix only punctuation, capitalization, and grammar. \
-         Do not change the meaning, do not add or remove content, do not translate. \
-         Keep the original language. If the text is already correct, return it unchanged.\n\
-         \n\
-         Text to fix:\n\
-         {}<end_of_turn>\n\
-         <start_of_turn>model\n",
-        text
-    )
+/// Build a chat-format prompt for text polishing.
+/// Selects the correct template format based on the model family.
+fn build_prompt(
+    text: &str,
+    custom_prompt: Option<&str>,
+    detected_lang: Option<&str>,
+    format: ChatFormat,
+) -> String {
+    let lang = detected_lang.unwrap_or("auto");
+    let user_content = match custom_prompt {
+        Some(template) => template.replace("{text}", text).replace("{lang}", lang),
+        None => format!(
+            "Language: {}\n\
+             Clean up this speech transcript. Output ONLY the cleaned text.\n\
+             - Remove filler words\n\
+             - Fix punctuation\n\
+             - Do NOT translate\n\n\
+             {}",
+            lang, text
+        ),
+    };
+    match format {
+        ChatFormat::Gemma => format!(
+            "<start_of_turn>user\n{}<end_of_turn>\n<start_of_turn>model\n",
+            user_content
+        ),
+        ChatFormat::ChatML => format!(
+            "<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n",
+            user_content
+        ),
+    }
 }
 
-/// Validate LLM output: reject empty or suspiciously long outputs.
+/// Count how many characters in a string are CJK (Chinese/Japanese/Korean).
+fn cjk_char_count(s: &str) -> usize {
+    s.chars()
+        .filter(|c| {
+            let cp = *c as u32;
+            (0x4E00..=0x9FFF).contains(&cp)
+                || (0x3400..=0x4DBF).contains(&cp)
+                || (0x3000..=0x303F).contains(&cp)
+                || (0xFF00..=0xFFEF).contains(&cp)
+        })
+        .count()
+}
+
+/// Check if text is predominantly CJK (>30% of non-whitespace chars).
+fn is_cjk_text(s: &str) -> bool {
+    let non_ws: usize = s.chars().filter(|c| !c.is_whitespace()).count();
+    if non_ws == 0 {
+        return false;
+    }
+    let cjk = cjk_char_count(s);
+    (cjk as f64 / non_ws as f64) > 0.3
+}
+
+/// Validate LLM output: reject clearly broken outputs, but allow polishing to work.
 fn validate_output(original: &str, generated: &str) -> String {
     let trimmed = generated.trim().to_string();
     if trimmed.is_empty() {
-        println!("[polish] empty output, using original");
+        println!("[polish:local] empty output, using original");
         return original.to_string();
     }
-    // Reject if output is suspiciously longer than input (likely hallucination)
-    if trimmed.len() > original.len() * 2 + 50 {
+    if trimmed.len() > original.len() * 3 + 100 {
         println!(
-            "[polish] output too long ({} vs {} chars), using original",
+            "[polish:local] output too long ({} vs {} chars), using original",
             trimmed.len(),
             original.len()
         );
         return original.to_string();
     }
-    trimmed
+    if is_cjk_text(original) && !is_cjk_text(&trimmed) {
+        println!("[polish:local] language switch detected (CJK→non-CJK), using original");
+        return original.to_string();
+    }
+    // Strip common LLM meta-commentary prefixes
+    let cleaned = strip_meta_prefix(&trimmed);
+    if cleaned.is_empty() {
+        println!("[polish:local] only meta-commentary, using original");
+        return original.to_string();
+    }
+    cleaned
+}
+
+/// Strip common LLM meta-commentary prefixes like "Here is the cleaned text:\n"
+fn strip_meta_prefix(s: &str) -> String {
+    let lower = s.to_lowercase();
+    let prefixes = [
+        "here is the cleaned text:",
+        "here's the cleaned text:",
+        "here is the corrected text:",
+        "here's the corrected text:",
+        "okay, here",
+        "sure, here",
+        "corrected text:",
+        "cleaned text:",
+    ];
+    for prefix in &prefixes {
+        if lower.starts_with(prefix) {
+            let rest = s[prefix.len()..].trim();
+            if !rest.is_empty() {
+                println!("[polish:local] stripped meta-prefix: '{}'", prefix);
+                return rest.to_string();
+            }
+        }
+    }
+    if (lower.starts_with("here") || lower.starts_with("okay") || lower.starts_with("sure"))
+        && s.contains('\n')
+    {
+        if let Some(idx) = s.find('\n') {
+            let rest = s[idx + 1..].trim();
+            if !rest.is_empty() {
+                println!("[polish:local] stripped first-line meta: '{}'", &s[..idx]);
+                return rest.to_string();
+            }
+        }
+    }
+    s.to_string()
 }

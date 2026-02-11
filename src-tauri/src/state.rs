@@ -1,6 +1,7 @@
 use std::sync::Mutex;
 
 use crate::audio::capture::AudioBuffer;
+use crate::config::AppConfig;
 use crate::correction::dictionary::CorrectionDictionary;
 use crate::polishing::engine::PolishingEngine;
 use crate::recognition::engine::RecognitionEngine;
@@ -12,4 +13,6 @@ pub struct AppState {
     pub last_result: Mutex<String>,
     /// Optional AI text polishing engine (None if model not available).
     pub polishing_engine: Option<Mutex<PolishingEngine>>,
+    /// Persisted app configuration (editable via Settings window).
+    pub config: Mutex<AppConfig>,
 }

@@ -69,7 +69,7 @@ pub fn run() {
         }
     }
 
-    let config = AppConfig::default();
+    let config = AppConfig::load();
 
     // Load SenseVoice model
     let engine = RecognitionEngine::new(
@@ -118,10 +118,12 @@ pub fn run() {
         correction_dict,
         last_result: Mutex::new(String::new()),
         polishing_engine,
+        config: Mutex::new(config),
     };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             commands::start_recording,
@@ -129,6 +131,8 @@ pub fn run() {
             commands::get_amplitude,
             commands::show_window,
             commands::hide_window,
+            commands::get_config,
+            commands::save_config,
         ])
         .setup(|app| {
             // Hide from Dock — app lives only in menu bar

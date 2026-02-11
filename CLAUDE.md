@@ -11,10 +11,13 @@ macOS 语音输入工具 — 按住快捷键说话，本地转写后自动输入
 - **Hotkey**: CGEventTap (Rust, macOS native, system-level key capture)
 - **Text Insertion**: arboard (clipboard) + CGEvent (Cmd+V simulation)
 - **Serialization**: serde + serde_json
+- **AI Polishing (local)**: Qwen 2.5 1.5B Instruct (GGUF) via llama-cpp-2 crate
+- **AI Polishing (online)**: OpenAI-compatible chat completions API via ureq (sync HTTP)
 
 ## Key Paths
 
-- **Model**: `~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
+- **SenseVoice Model**: `~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
+- **Polish Model (Qwen)**: `~/.openclaw/models/qwen2.5-1.5b/qwen2.5-1.5b-instruct-q4_k_m.gguf`
 - **App Config**: `~/Library/Application Support/com.mac-voice-input/config.json`
 - **Corrections Dict**: `~/Library/Application Support/com.mac-voice-input/corrections.json`
 - **PRD**: `docs/PRD.md`
@@ -42,6 +45,9 @@ src-tauri/src/         Rust backend
   recognition/         sherpa-rs SenseVoice wrapper
   insertion/           Clipboard paste + Cmd+V simulation
   correction/          JSON-based text correction dictionary
+  polishing/           AI text polishing (dual-engine)
+    engine.rs          Local GGUF model (llama-cpp-2, ChatML/Gemma auto-detect)
+    online.rs          OpenAI-compatible API client (ureq, sync HTTP)
 
 src/                   Web frontend (TypeScript)
   index.html           Floating panel (frameless, always-on-top)
@@ -73,3 +79,25 @@ src/                   Web frontend (TypeScript)
 - Hotkey is fully configurable via a key recorder widget in settings
 - Text insertion uses clipboard save/restore pattern to not destroy user's clipboard
 - App runs as Accessory (no Dock icon, menu bar only)
+
+## AI Polishing Pipeline
+
+```
+transcribe → corrections → polish(mode) → insert
+                            ├── Local:  llama-cpp-2 (Qwen 2.5 1.5B, ChatML prompt)
+                            └── Online: ureq HTTP POST (OpenAI /chat/completions)
+```
+
+- **Dual-engine**: user chooses "Local Model", "Online API", or "Off" in Settings
+- **Local model**: Qwen 2.5 1.5B Instruct GGUF (~1.1GB), loaded once at startup via llama-cpp-2
+  - Auto-detects chat template from filename: "qwen" → ChatML, otherwise Gemma
+  - Temperature 0.15, greedy sampling for deterministic output
+  - `validate_output()` rejects broken outputs (empty, too long, language switch)
+  - `strip_meta_prefix()` removes LLM preamble like "Here is the cleaned text:"
+- **Online API**: stateless `OnlinePolisher` created per-call (no startup cost)
+  - Endpoint auto-appends `/chat/completions` if missing
+  - Works with Step-Fun, DeepSeek, Qwen-Turbo, Groq, OpenAI, etc.
+  - 10s read / 5s write timeout via ureq
+- **Prompt template**: supports `{text}` and `{lang}` placeholders
+  - `{lang}` is auto-filled from SenseVoice detection (zh, en, ja, etc.)
+- Config fields: `polish_enabled`, `polish_mode` ("local"/"api"), `api_endpoint`, `api_key`, `api_model`

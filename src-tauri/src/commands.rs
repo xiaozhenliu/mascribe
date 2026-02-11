@@ -1,6 +1,8 @@
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::audio::capture::AudioCapture;
+use crate::config::AppConfig;
+use crate::polishing::online::OnlinePolisher;
 use crate::state::AppState;
 
 #[tauri::command]
@@ -23,6 +25,41 @@ pub fn hide_window(app: AppHandle) -> Result<(), String> {
 pub fn get_amplitude(state: State<'_, AppState>) -> f32 {
     state.audio_buffer.get_amplitude()
 }
+
+// ── Config commands ──
+
+#[tauri::command]
+pub fn get_config(state: State<'_, AppState>) -> Result<AppConfig, String> {
+    let config = state
+        .config
+        .lock()
+        .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+    Ok(config.clone())
+}
+
+#[tauri::command]
+pub fn save_config(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    config: AppConfig,
+) -> Result<(), String> {
+    // Persist to disk
+    config.save()?;
+    // Update in-memory config
+    {
+        let mut current = state
+            .config
+            .lock()
+            .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        *current = config;
+    }
+    // Notify frontends that config changed (for hotkey re-registration)
+    let _ = app.emit("config-changed", ());
+    println!("[save_config] config saved and updated");
+    Ok(())
+}
+
+// ── Recording commands ──
 
 /// Wrapper to allow cpal::Stream in a static Mutex.
 /// Safety: We only access this from Tauri command handlers which are serialized.
@@ -71,13 +108,19 @@ pub fn stop_recording_and_transcribe(
         return Err("Recording too short".to_string());
     }
 
-    // 3. Save raw audio to WAV before any processing
+    // Read config for recordings dir, polish settings, and API config
+    let (recordings_dir, polish_prompt, polish_enabled, polish_mode,
+         api_endpoint, api_key, api_model) = {
+        let cfg = state.config.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        (cfg.recordings_dir.clone(), cfg.polish_prompt.clone(), cfg.polish_enabled,
+         cfg.polish_mode.clone(), cfg.api_endpoint.clone(),
+         cfg.api_key.clone(), cfg.api_model.clone())
+    };
+
+    // 3. Save raw audio to WAV before any processing (using configured path)
     {
-        let recordings_dir = dirs::data_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("com.mac-voice-input")
-            .join("recordings");
-        match crate::audio::wav_save::save_wav(&samples, sample_rate, &recordings_dir) {
+        let rec_path = std::path::PathBuf::from(&recordings_dir);
+        match crate::audio::wav_save::save_wav(&samples, sample_rate, &rec_path) {
             Ok(path) => println!("[stop_and_transcribe] saved WAV: {}", path.display()),
             Err(e) => println!("[stop_and_transcribe] WARNING: failed to save WAV: {}", e),
         }
@@ -95,50 +138,90 @@ pub fn stop_recording_and_transcribe(
     };
 
     // 5. Transcribe
-    let text = {
+    let (text, detected_lang) = {
         let mut engine = state
             .recognition_engine
             .lock()
             .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
         println!("[transcribe] sending {} samples at {}Hz to SenseVoice", samples_16k.len(), target_rate);
-        let (text, _lang) = engine
+        let (text, lang) = engine
             .transcribe(target_rate, &samples_16k)
             .map_err(|e: anyhow::Error| e.to_string())?;
-        println!("[transcribe] result: '{}' (lang={})", text, _lang);
-        text
+        println!("[transcribe] result: '{}' (lang={})", text, lang);
+        (text, lang)
     };
 
     // 6. Apply corrections
     let corrected = state.correction_dict.apply(&text);
 
-    // 6.5. AI polishing (optional — skipped if LLM not loaded)
-    let polished = if let Some(ref engine_mutex) = state.polishing_engine {
-        match engine_mutex.lock() {
-            Ok(engine) => {
-                println!("[polish] polishing text: '{}'", corrected);
-                let start = std::time::Instant::now();
-                match engine.polish(&corrected) {
-                    Ok(result) => {
-                        println!(
-                            "[polish] result: '{}' ({:.1}s)",
-                            result,
-                            start.elapsed().as_secs_f64()
-                        );
-                        result
+    // 6.5. AI polishing — dispatch to local engine or online API based on config
+    let polished = if !polish_enabled {
+        println!("[polish] disabled in config, skipping");
+        corrected.clone()
+    } else {
+        match polish_mode.as_str() {
+            "local" => {
+                // Local GGUF model polishing
+                if let Some(ref engine_mutex) = state.polishing_engine {
+                    match engine_mutex.lock() {
+                        Ok(engine) => {
+                            println!("[polish:local] '{}' (lang={})", corrected, detected_lang);
+                            let start = std::time::Instant::now();
+                            let custom = if polish_prompt.is_empty() { None } else { Some(polish_prompt.as_str()) };
+                            let lang_ref = if detected_lang.is_empty() { None } else { Some(detected_lang.as_str()) };
+                            match engine.polish(&corrected, custom, lang_ref) {
+                                Ok(result) => {
+                                    println!("[polish:local] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
+                                    result
+                                }
+                                Err(e) => {
+                                    println!("[polish:local] ERROR: {}, using original", e);
+                                    corrected.clone()
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            println!("[polish:local] lock error: {}, using original", e);
+                            corrected.clone()
+                        }
                     }
-                    Err(e) => {
-                        println!("[polish] ERROR: {}, using unpolished text", e);
-                        corrected.clone()
+                } else {
+                    println!("[polish:local] engine not loaded, skipping");
+                    corrected.clone()
+                }
+            }
+            "api" => {
+                // Online API polishing (OpenAI-compatible)
+                if api_endpoint.is_empty() || api_key.is_empty() || api_model.is_empty() {
+                    println!("[polish:api] API not configured (endpoint/key/model empty), skipping");
+                    corrected.clone()
+                } else {
+                    let lang = if detected_lang.is_empty() { "auto" } else { &detected_lang };
+                    let prompt = if polish_prompt.is_empty() {
+                        crate::config::DEFAULT_POLISH_PROMPT.to_string()
+                    } else {
+                        polish_prompt.clone()
+                    };
+                    println!("[polish:api] '{}' (lang={}) via {}", corrected, lang, api_model);
+                    let start = std::time::Instant::now();
+                    let polisher = OnlinePolisher::new(&api_endpoint, &api_key, &api_model);
+                    match polisher.polish(&corrected, &prompt, lang) {
+                        Ok(result) => {
+                            println!("[polish:api] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
+                            result
+                        }
+                        Err(e) => {
+                            println!("[polish:api] ERROR: {}, using original", e);
+                            corrected.clone()
+                        }
                     }
                 }
             }
-            Err(e) => {
-                println!("[polish] lock error: {}, using unpolished text", e);
+            _ => {
+                println!("[polish] unknown mode '{}', skipping", polish_mode);
                 corrected.clone()
             }
         }
-    } else {
-        corrected.clone()
     };
 
     // 7. Insert text into active app

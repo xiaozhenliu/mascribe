@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { register } from "@tauri-apps/plugin-global-shortcut";
+import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 
 let isRecording = false;
 let amplitudeTimer: number | null = null;
@@ -200,12 +200,50 @@ async function toggleRecording() {
   }
 }
 
+// ── Hotkey registration ──
+
+let currentShortcut: string | null = null;
+
+async function registerShortcut(shortcut: string) {
+  // Unregister previous shortcut if any
+  if (currentShortcut) {
+    try {
+      await unregister(currentShortcut);
+    } catch { /* may not be registered */ }
+  }
+  await register(shortcut, (event) => {
+    if (event.state === "Pressed") toggleRecording();
+  });
+  currentShortcut = shortcut;
+  console.log(`[main] registered shortcut: ${shortcut}`);
+}
+
 // ── Init ──
 
 window.addEventListener("DOMContentLoaded", async () => {
   showIdle();
 
-  await register("Alt+Space", (event) => {
-    if (event.state === "Pressed") toggleRecording();
+  // Load configured shortcut from backend
+  let shortcut = "Alt+Space"; // fallback
+  try {
+    const config = await invoke("get_config") as { shortcut: string };
+    if (config.shortcut) shortcut = config.shortcut;
+  } catch (e) {
+    console.warn("[main] failed to load config, using default shortcut:", e);
+  }
+
+  await registerShortcut(shortcut);
+
+  // Listen for config changes (from Settings window) and re-register hotkey
+  const { listen } = await import("@tauri-apps/api/event");
+  await listen("config-changed", async () => {
+    try {
+      const config = await invoke("get_config") as { shortcut: string };
+      if (config.shortcut && config.shortcut !== currentShortcut) {
+        await registerShortcut(config.shortcut);
+      }
+    } catch (e) {
+      console.error("[main] failed to update shortcut:", e);
+    }
   });
 });
