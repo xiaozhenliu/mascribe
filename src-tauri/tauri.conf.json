@@ -16,8 +16,8 @@
       {
         "label": "main",
         "title": "Voice Input",
-        "width": 220,
-        "height": 48,
+        "width": 260,
+        "height": 100,
         "decorations": false,
         "alwaysOnTop": true,
         "focusable": false,

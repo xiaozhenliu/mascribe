@@ -2,17 +2,25 @@ import { invoke } from "@tauri-apps/api/core";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 
 let isRecording = false;
+let isProcessing = false; // true while transcribing+polishing — blocks new recordings
 let amplitudeTimer: number | null = null;
 let hideTimer: number | null = null;
 
-const WAVEFORM_BARS = 16;
-const barHeights: number[] = new Array(WAVEFORM_BARS).fill(0);
-const barTargets: number[] = new Array(WAVEFORM_BARS).fill(0);
+const WAVEFORM_POINTS = 24;
+const waveHeights: number[] = new Array(WAVEFORM_POINTS).fill(0);
+const waveTargets: number[] = new Array(WAVEFORM_POINTS).fill(0);
 let currentAmplitude = 0;
+
+// ── Auto-gain control (AGC) ──
+// Tracks recent peak so the waveform always fills the display,
+// regardless of how loudly or quietly the user speaks.
+let recentPeak = 0.01; // floor to avoid division by zero
+const AGC_ATTACK = 0.3;  // how fast peak rises to a louder signal
+const AGC_DECAY = 0.985; // how slowly peak fades (per 50ms tick → ~1.5s half-life)
 
 const dot = () => document.getElementById("status-dot")!;
 const canvas = () => document.getElementById("waveform") as HTMLCanvasElement;
-const label = () => document.getElementById("status-label")!;
+const toast = () => document.getElementById("toast")!;
 
 // ── Window visibility helpers ──
 
@@ -31,78 +39,115 @@ function scheduleHide(delayMs: number) {
   }, delayMs);
 }
 
+// ── Toast helpers ──
+
+let toastTimer: number | null = null;
+
+function showToast(text: string, cls?: "success" | "error") {
+  const t = toast();
+  t.textContent = text;
+  t.className = "toast" + (cls ? ` ${cls}` : "");
+  // Auto-clear previous timer
+  if (toastTimer !== null) clearTimeout(toastTimer);
+}
+
+function hideToast() {
+  toast().className = "toast hidden";
+  toast().textContent = "";
+  if (toastTimer !== null) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+}
+
 // ── State transitions ──
 
 function showIdle() {
   dot().className = "dot";
   canvas().classList.remove("hidden");
-  label().textContent = "";
-  barHeights.fill(0);
-  barTargets.fill(0);
+  waveHeights.fill(0);
+  waveTargets.fill(0);
   currentAmplitude = 0;
   drawWaveform();
+  hideToast();
 }
 
 function showRecording() {
   dot().className = "dot recording";
   canvas().classList.remove("hidden");
-  label().textContent = "";
+  hideToast();
 }
+
+let processingStart = 0;
+let processingTimer: number | null = null;
 
 function showProcessing() {
   dot().className = "dot processing";
   canvas().classList.add("hidden");
-  label().textContent = "Processing...";
+  // Show elapsed time in toast
+  processingStart = Date.now();
+  showToast("Processing...");
+  if (processingTimer !== null) clearInterval(processingTimer);
+  processingTimer = window.setInterval(() => {
+    const elapsed = ((Date.now() - processingStart) / 1000).toFixed(1);
+    showToast(`Processing... ${elapsed}s`);
+  }, 200);
+}
+
+function stopProcessingTimer() {
+  if (processingTimer !== null) {
+    clearInterval(processingTimer);
+    processingTimer = null;
+  }
 }
 
 function showError(msg: string) {
   dot().className = "dot";
   canvas().classList.add("hidden");
-  label().textContent = msg;
-  label().style.color = "rgba(255, 59, 48, 0.8)";
-  setTimeout(() => {
-    if (label().textContent === msg) showIdle();
-    label().style.color = "";
+  showToast(msg, "error");
+  toastTimer = window.setTimeout(() => {
+    showIdle();
   }, 2000);
-  // Hide window after showing error briefly
   scheduleHide(2500);
 }
 
 function showSuccess(text: string) {
   dot().className = "dot";
   canvas().classList.add("hidden");
-  const display = text.length > 25 ? text.substring(0, 25) + "…" : text;
-  label().textContent = display;
-  label().style.color = "rgba(52, 199, 89, 0.8)";
-  setTimeout(() => {
-    if (label().textContent === display) showIdle();
-    label().style.color = "";
+  const display = text.length > 30 ? text.substring(0, 30) + "…" : text;
+  showToast(display, "success");
+  toastTimer = window.setTimeout(() => {
+    showIdle();
   }, 2000);
-  // Hide window after showing result briefly
   scheduleHide(2500);
 }
 
-// ── Waveform (in-place bouncing) ──
+// ── Waveform (single-line ECG style) ──
 
-function updateBarTargets(amp: number) {
-  const center = (WAVEFORM_BARS - 1) / 2;
-  for (let i = 0; i < WAVEFORM_BARS; i++) {
+function updateWaveTargets(amp: number) {
+  const center = (WAVEFORM_POINTS - 1) / 2;
+  for (let i = 0; i < WAVEFORM_POINTS; i++) {
     const dist = Math.abs(i - center) / center;
-    const weight = 1.0 - dist * 0.5;
-    const jitter = 0.6 + Math.random() * 0.8;
-    barTargets[i] = Math.min(amp * weight * jitter, 1.0);
+    // Bell-curve envelope: edges taper to ~20%, center gets full amplitude
+    const envelope = 0.2 + 0.8 * (1.0 - dist * dist);
+    // ECG-style: random positive or negative deflection (asymmetric)
+    const sign = (Math.random() > 0.5) ? 1 : -1;
+    const jitter = 0.3 + Math.random() * 0.7;
+    waveTargets[i] = Math.max(Math.min(amp * envelope * jitter * sign, 1.0), -1.0);
   }
 }
 
-function animateBars() {
-  for (let i = 0; i < WAVEFORM_BARS; i++) {
-    const diff = barTargets[i] - barHeights[i];
-    if (diff > 0) {
-      barHeights[i] += diff * 0.4;
+function animateWave() {
+  for (let i = 0; i < WAVEFORM_POINTS; i++) {
+    const diff = waveTargets[i] - waveHeights[i];
+    if (Math.abs(diff) > Math.abs(waveHeights[i]) * 0.1) {
+      // Fast attack toward target
+      waveHeights[i] += diff * 0.35;
     } else {
-      barHeights[i] += diff * 0.15;
+      // Slow decay toward zero
+      waveHeights[i] += diff * 0.12;
     }
-    if (barHeights[i] < 0.01) barHeights[i] = 0;
+    if (Math.abs(waveHeights[i]) < 0.005) waveHeights[i] = 0;
   }
 }
 
@@ -125,25 +170,47 @@ function drawWaveform() {
 
   ctx.clearRect(0, 0, w, h);
 
-  const gap = 2;
-  const barW = Math.max(1, (w - gap * (WAVEFORM_BARS - 1)) / WAVEFORM_BARS);
-  const maxH = h - 4;
   const cy = h / 2;
+  const maxAmp = h / 2 - 2; // leave 2px margin top/bottom
+  const step = w / (WAVEFORM_POINTS - 1);
 
-  for (let i = 0; i < WAVEFORM_BARS; i++) {
-    const a = Math.min(barHeights[i], 1.0);
-    const bh = Math.max(2, a * maxH);
-    const x = i * (barW + gap);
-    const y = cy - bh / 2;
-
-    const r = Math.round(52 + a * 203);
-    const g = Math.round(199 - a * 140);
-    const b = Math.round(89 - a * 41);
-    ctx.fillStyle = `rgba(${r},${g},${b},${0.4 + a * 0.6})`;
-    ctx.beginPath();
-    ctx.roundRect(x, y, barW, bh, barW / 2);
-    ctx.fill();
+  // Build y-values: single line that deflects above and below center
+  const yVals: number[] = [];
+  for (let i = 0; i < WAVEFORM_POINTS; i++) {
+    const a = Math.max(Math.min(waveHeights[i], 1.0), -1.0);
+    yVals.push(cy - a * maxAmp); // negative a → below center, positive → above
   }
+
+  // Fill area between the line and center
+  ctx.beginPath();
+  ctx.moveTo(0, cy);
+  for (let i = 0; i < WAVEFORM_POINTS; i++) {
+    ctx.lineTo(i * step, yVals[i]);
+  }
+  ctx.lineTo((WAVEFORM_POINTS - 1) * step, cy);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(52, 199, 89, 0.12)";
+  ctx.fill();
+
+  // Draw the main ECG line
+  ctx.beginPath();
+  ctx.moveTo(0, yVals[0]);
+  for (let i = 1; i < WAVEFORM_POINTS; i++) {
+    ctx.lineTo(i * step, yVals[i]);
+  }
+  ctx.strokeStyle = "rgba(52, 199, 89, 0.85)";
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  // Draw faint center baseline
+  ctx.beginPath();
+  ctx.moveTo(0, cy);
+  ctx.lineTo(w, cy);
+  ctx.strokeStyle = "rgba(52, 199, 89, 0.15)";
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
 }
 
 function startPolling() {
@@ -151,9 +218,16 @@ function startPolling() {
   amplitudeTimer = window.setInterval(async () => {
     try {
       const raw = (await invoke("get_amplitude")) as number;
-      currentAmplitude = Math.min(raw * 8, 1.0);
-      updateBarTargets(currentAmplitude);
-      animateBars();
+      // AGC: track peak and normalize
+      if (raw > recentPeak) {
+        recentPeak += (raw - recentPeak) * AGC_ATTACK;
+      } else {
+        recentPeak *= AGC_DECAY;
+      }
+      recentPeak = Math.max(recentPeak, 0.01); // keep a floor
+      currentAmplitude = Math.min(raw / recentPeak, 1.0);
+      updateWaveTargets(currentAmplitude);
+      animateWave();
       drawWaveform();
     } catch { /* ignore */ }
   }, 50);
@@ -169,6 +243,9 @@ function stopPolling() {
 // ── Toggle ──
 
 async function toggleRecording() {
+  // Block hotkey while backend is processing (transcribe + polish + insert)
+  if (isProcessing) return;
+
   if (!isRecording) {
     try {
       // Show window first, then start recording
@@ -184,8 +261,11 @@ async function toggleRecording() {
     }
   } else {
     isRecording = false;
+    isProcessing = true;
     stopPolling();
     showProcessing();
+    // Force repaint so the processing UI is visible before the long await
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     try {
       const result = await invoke("stop_recording_and_transcribe") as string;
       if (!result || result.trim() === "") {
@@ -196,6 +276,9 @@ async function toggleRecording() {
     } catch (e) {
       console.error("stop error:", e);
       showError(String(e).substring(0, 30));
+    } finally {
+      stopProcessingTimer();
+      isProcessing = false;
     }
   }
 }

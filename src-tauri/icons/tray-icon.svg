@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44">
+  <!--
+    Single unified path for the microphone outline + stand.
+    No overlapping strokes — all segments are one continuous path
+    with deliberate gaps so nothing crosses.
+  -->
+
+  <!-- Mic capsule (open at bottom so it doesn't cross the arc) -->
+  <!-- Arc from bottom-left, up around the top, down to bottom-right -->
+  <path d="M 14 20
+           L 14 12 Q 14 4, 22 4 Q 30 4, 30 12
+           L 30 20"
+        fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stand arc (starts below capsule ends, curves down) -->
+  <path d="M 11 20 Q 11 34, 22 34 Q 33 34, 33 20"
+        fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Stand stem + base (one continuous path) -->
+  <path d="M 22 34 L 22 39 M 16 39 L 28 39"
+        fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Letter T — solid opaque rectangles, no transparency -->
+  <rect x="17.5" y="10.5" width="9" height="2.5" rx="1" fill="#000"/>
+  <rect x="20.75" y="10.5" width="2.5" height="11" rx="1" fill="#000"/>
+</svg>

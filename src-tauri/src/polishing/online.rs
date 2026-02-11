@@ -120,9 +120,10 @@ impl OnlinePolisher {
             .map(|c| c.message.content.trim().to_string())
             .unwrap_or_default();
 
+        let preview: String = result.chars().take(60).collect();
         println!(
             "[polish:api] result: '{}' ({:.1}s)",
-            &result[..result.len().min(80)],
+            preview,
             start.elapsed().as_secs_f64()
         );
 

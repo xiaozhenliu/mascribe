@@ -86,6 +86,7 @@ pub fn stop_recording_and_transcribe(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
+    let pipeline_start = std::time::Instant::now();
     println!("[stop_and_transcribe] called");
     // 1. Stop recording — drop the stream
     {
@@ -144,10 +145,11 @@ pub fn stop_recording_and_transcribe(
             .lock()
             .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
         println!("[transcribe] sending {} samples at {}Hz to SenseVoice", samples_16k.len(), target_rate);
+        let t_start = std::time::Instant::now();
         let (text, lang) = engine
             .transcribe(target_rate, &samples_16k)
             .map_err(|e: anyhow::Error| e.to_string())?;
-        println!("[transcribe] result: '{}' (lang={})", text, lang);
+        println!("[transcribe] result: '{}' (lang={}) ({:.1}s)", text, lang, t_start.elapsed().as_secs_f64());
         (text, lang)
     };
 
@@ -226,6 +228,8 @@ pub fn stop_recording_and_transcribe(
 
     // 7. Insert text into active app
     crate::insertion::clipboard::insert_text(&polished).map_err(|e: anyhow::Error| e.to_string())?;
+
+    println!("[pipeline] total: {:.1}s", pipeline_start.elapsed().as_secs_f64());
 
     // 8. Update last result and emit event
     {

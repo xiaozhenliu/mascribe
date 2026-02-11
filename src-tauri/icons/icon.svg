@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2C2C2E"/>
+      <stop offset="100%" style="stop-color:#1C1C1E"/>
+    </linearGradient>
+    <linearGradient id="mic" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#34C759"/>
+      <stop offset="100%" style="stop-color:#28A745"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="url(#bg)"/>
+
+  <!-- Mic capsule — fully opaque, no transparency issues -->
+  <rect x="362" y="180" width="300" height="420" rx="150" ry="150" fill="url(#mic)"/>
+
+  <!-- Mic stand arc — fully opaque green, starts below capsule bottom (y=500)
+       so it doesn't overlap with the capsule shape -->
+  <path d="M 312 500 Q 312 710, 512 710 Q 712 710, 712 500"
+        fill="none" stroke="#30B350" stroke-width="42" stroke-linecap="round"/>
+
+  <!-- Stand stem + base — one continuous path, no overlap with arc -->
+  <path d="M 512 710 L 512 830 M 412 830 L 612 830"
+        fill="none" stroke="#30B350" stroke-width="42" stroke-linecap="round"/>
+
+  <!-- Letter T — solid dark rectangles -->
+  <rect x="402" y="300" width="220" height="46" rx="8" fill="#1C1C1E"/>
+  <rect x="489" y="300" width="46" height="220" rx="8" fill="#1C1C1E"/>
+</svg>

@@ -1,3 +1,4 @@
+use tauri::image::Image;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{ActivationPolicy, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -15,8 +16,13 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
         .items(&[&settings_item, &quit_item])
         .build()?;
 
+    // Use dedicated tray icon (black outline, transparent background)
+    // so macOS template mode renders it correctly in light/dark menu bars.
+    let tray_icon = Image::from_bytes(include_bytes!("../icons/tray-icon.png"))
+        .unwrap_or_else(|_| app.default_window_icon().unwrap().clone());
+
     TrayIconBuilder::new()
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(tray_icon)
         .tooltip("Voice Input")
         .icon_as_template(true) // Adapts to macOS light/dark menu bar
         .menu(&menu)

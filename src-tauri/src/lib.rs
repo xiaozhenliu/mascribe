@@ -146,14 +146,22 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.hide();
 
+                // Disable native macOS window shadow — we use CSS box-shadow instead.
+                // Without this, macOS draws its own shadow around the transparent window
+                // creating an ugly, irregular "ghost frame" artifact.
+                let _ = window.set_shadow(false);
+
                 // Pre-calculate position for when we show it later
                 if let Some(monitor) = window.current_monitor().ok().flatten() {
                     let screen = monitor.size();
                     let scale = monitor.scale_factor();
-                    let win_w = 220.0;
-                    let win_h = 48.0;
+                    let win_w = 260.0;
+                    let win_h = 100.0;
+                    // monitor.position() gives the top-left of the visible area;
+                    // screen.height includes the Dock, so we offset by ~80px
+                    // to place the pill just above the Dock.
                     let x = (screen.width as f64 / scale - win_w) / 2.0;
-                    let y = screen.height as f64 / scale - win_h - 90.0;
+                    let y = screen.height as f64 / scale - win_h - 80.0;
                     let _ = window.set_position(tauri::PhysicalPosition::new(
                         (x * scale) as i32,
                         (y * scale) as i32,
