@@ -1,23 +1,24 @@
-# Rust
-/src-tauri/target/
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Node
-/node_modules/
-/dist/
+node_modules
+dist
+dist-ssr
+*.local
 
-# macOS
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Environment
-.env
-.env.*
-
-# Build artifacts
-*.dmg
-*.app
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
