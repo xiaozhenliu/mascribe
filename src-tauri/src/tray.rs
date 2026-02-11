@@ -47,8 +47,9 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
                         WebviewUrl::App("settings.html".into()),
                     )
                     .title("Voice Input Settings")
-                    .inner_size(520.0, 480.0)
-                    .resizable(false)
+                    .inner_size(520.0, 580.0)
+                    .min_inner_size(520.0, 400.0)
+                    .resizable(true)
                     .center()
                     .build()
                     {

@@ -22,6 +22,7 @@ interface AppConfig {
 // ── DOM refs ──
 const shortcutInput = () => document.getElementById("shortcut") as HTMLInputElement;
 const shortcutClear = () => document.getElementById("shortcut-clear") as HTMLButtonElement;
+const shortcutPresets = () => document.getElementById("shortcut-presets") as HTMLSelectElement;
 const recordingsDir = () => document.getElementById("recordings-dir") as HTMLInputElement;
 const browseBtn = () => document.getElementById("browse-btn") as HTMLButtonElement;
 const polishPrompt = () => document.getElementById("polish-prompt") as HTMLTextAreaElement;
@@ -31,8 +32,6 @@ const apiModel = () => document.getElementById("api-model") as HTMLInputElement;
 const apiSettings = () => document.getElementById("api-settings") as HTMLElement;
 const polishPromptSection = () => document.getElementById("polish-prompt-section") as HTMLElement;
 const btnSave = () => document.getElementById("btn-save") as HTMLButtonElement;
-const btnCancel = () => document.getElementById("btn-cancel") as HTMLButtonElement;
-
 let originalConfig: AppConfig | null = null;
 
 // ── Shortcut key recorder ──
@@ -112,13 +111,29 @@ function setupShortcutRecorder() {
     input.blur();
   });
 
-  // Prevent context menu popup when recording ContextMenu key
+  // Handle ContextMenu key: on macOS, pressing the Application/ContextMenu key
+  // on a Windows keyboard fires a "contextmenu" event but NOT a "keydown" event.
+  // So we must capture it here as the primary recording path for this key.
   input.addEventListener("contextmenu", (e) => {
-    if (isListening) e.preventDefault();
+    e.preventDefault();
+    if (!isListening) return;
+    input.value = "ContextMenu";
+    input.blur();
   });
 
   shortcutClear().addEventListener("click", () => {
     input.value = "Alt+Space";
+  });
+
+  // Preset dropdown for special keys (ContextMenu, etc.) that can't be
+  // captured via keydown in WebView
+  shortcutPresets().addEventListener("change", (e) => {
+    const select = e.target as HTMLSelectElement;
+    if (select.value) {
+      input.value = select.value;
+      // Reset select to placeholder so it can be re-selected
+      select.selectedIndex = 0;
+    }
   });
 }
 
@@ -270,8 +285,4 @@ window.addEventListener("DOMContentLoaded", async () => {
   await setupBrowse();
 
   btnSave().addEventListener("click", saveConfig);
-  btnCancel().addEventListener("click", async () => {
-    const win = getCurrentWindow();
-    await win.close();
-  });
 });

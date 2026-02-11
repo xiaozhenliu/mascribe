@@ -23,6 +23,13 @@
             readonly
             placeholder="Click and press keys..."
           />
+          <select id="shortcut-presets" class="btn-small" title="Special keys">
+            <option value="" disabled selected>Presets ▾</option>
+            <option value="ContextMenu">☰ Menu Key</option>
+            <option value="F13">F13</option>
+            <option value="F14">F14</option>
+            <option value="F15">F15</option>
+          </select>
           <button id="shortcut-clear" class="btn-small" title="Reset to default">Reset</button>
         </div>
       </section>
@@ -87,7 +94,6 @@
 
       <!-- Actions -->
       <div class="actions">
-        <button id="btn-cancel" class="btn secondary">Cancel</button>
         <button id="btn-save" class="btn primary">Save</button>
       </div>
     </div>

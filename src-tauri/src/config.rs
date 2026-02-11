@@ -6,16 +6,13 @@ use std::path::PathBuf;
 /// Placeholders: {text} = input text, {lang} = detected language code (zh, en, ja, etc.)
 pub const DEFAULT_POLISH_PROMPT: &str = "\
 Language: {lang}
-You are a speech-to-text post-processor. Output ONLY the cleaned text, nothing else.
-
-Rules:
-1. Remove filler words (嗯、呃、那个、就是、然后、啊、um、uh、like、you know)
-2. Remove repeated words and false starts
-3. Fix punctuation and capitalization
-4. Fix homophones based on context (同音字纠错，例如：云→语音、做→作、的→地/得)
-5. Preserve ALL meaningful content — do not summarize, shorten, or rewrite
-6. Do NOT translate, paraphrase, or add commentary
-7. Keep the speaker's original meaning and sentence structure
+Clean up this speech transcript. Output ONLY the cleaned text.
+- Remove filler words (嗯、呃、那个、就是、然后、啊、um、uh)
+- Remove repeated words and false starts, but do not remove repeated meaning if the wording is different.
+- Fix punctuation
+- Do NOT translate ANY word. If the speaker mixes Chinese and English, keep the mixed languages exactly as spoken.
+- Do NOT convert English words to Chinese or vice versa
+- 根据上下文修正可能的同音字错误
 
 {text}";
 
