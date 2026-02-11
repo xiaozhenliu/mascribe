@@ -92,6 +92,22 @@
         <textarea id="polish-prompt" rows="8"></textarea>
       </section>
 
+      <!-- Correction Dictionary -->
+      <section class="field">
+        <label>Correction Dictionary / 纠错词典</label>
+        <p class="hint">
+          Auto-replace words after transcription (case-insensitive).
+          识别后自动替换文字，不区分大小写。
+        </p>
+        <div class="corrections-add">
+          <input type="text" id="correction-from" placeholder="From / 原文" />
+          <span class="corrections-arrow">→</span>
+          <input type="text" id="correction-to" placeholder="To / 替换为" />
+          <button id="correction-add-btn" class="btn-small">Add</button>
+        </div>
+        <div id="corrections-list" class="corrections-list"></div>
+      </section>
+
       <!-- Actions -->
       <div class="actions">
         <button id="btn-save" class="btn primary">Save</button>

@@ -25,6 +25,28 @@ impl CorrectionDictionary {
         }
     }
 
+    /// Get all entries as (from, to) pairs for frontend display.
+    pub fn entries(&self) -> &[(String, String)] {
+        &self.entries
+    }
+
+    /// Create from a list of (from, to) pairs. Sorts by key length for longest-match-first.
+    pub fn from_entries(mut entries: Vec<(String, String)>) -> Self {
+        entries.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+        Self { entries }
+    }
+
+    /// Persist entries to a JSON file (HashMap format).
+    pub fn save(&self, path: &Path) -> anyhow::Result<()> {
+        let map: HashMap<String, String> = self.entries.iter().cloned().collect();
+        let json = serde_json::to_string_pretty(&map)?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(path, json)?;
+        Ok(())
+    }
+
     pub fn apply(&self, text: &str) -> String {
         let mut result = text.to_string();
         for (from, to) in &self.entries {

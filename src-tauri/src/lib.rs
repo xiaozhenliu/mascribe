@@ -81,12 +81,13 @@ pub fn run() {
     )
     .expect("Failed to load SenseVoice model");
 
-    // Load correction dictionary
-    let dict_path = dirs::home_dir()
-        .unwrap()
-        .join(".openclaw/workspace/clawd/memory/personal-corrections.json");
-    let correction_dict = CorrectionDictionary::load(&dict_path).unwrap_or_else(|_| {
-        println!("No correction dictionary found, using empty");
+    // Load correction dictionary from app data directory
+    let dict_path = dirs::data_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("com.mac-voice-input")
+        .join("corrections.json");
+    let correction_dict = CorrectionDictionary::load(&dict_path).unwrap_or_else(|e| {
+        println!("[correction] No dictionary found ({}), using empty", e);
         CorrectionDictionary::empty()
     });
 
@@ -116,7 +117,7 @@ pub fn run() {
     let app_state = AppState {
         recognition_engine: Mutex::new(engine),
         audio_buffer: AudioBuffer::new(),
-        correction_dict,
+        correction_dict: Mutex::new(correction_dict),
         last_result: Mutex::new(String::new()),
         polishing_engine,
         config: Mutex::new(config),
@@ -135,6 +136,8 @@ pub fn run() {
             commands::hide_window,
             commands::get_config,
             commands::save_config,
+            commands::get_corrections,
+            commands::save_corrections,
             commands::register_native_hotkey,
             commands::unregister_native_hotkey,
         ])

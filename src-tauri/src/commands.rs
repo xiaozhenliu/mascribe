@@ -60,6 +60,50 @@ pub fn save_config(
     Ok(())
 }
 
+// ── Correction dictionary commands ──
+
+#[tauri::command]
+pub fn get_corrections(state: State<'_, AppState>) -> Result<Vec<(String, String)>, String> {
+    let dict = state
+        .correction_dict
+        .lock()
+        .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+    Ok(dict.entries().to_vec())
+}
+
+#[tauri::command]
+pub fn save_corrections(
+    state: State<'_, AppState>,
+    entries: Vec<(String, String)>,
+) -> Result<(), String> {
+    use crate::correction::dictionary::CorrectionDictionary;
+
+    let new_dict = CorrectionDictionary::from_entries(entries);
+
+    // Save to disk
+    let dict_path = dirs::data_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("com.mac-voice-input")
+        .join("corrections.json");
+    new_dict
+        .save(&dict_path)
+        .map_err(|e| format!("Failed to save corrections: {}", e))?;
+
+    // Update in-memory dictionary
+    let mut dict = state
+        .correction_dict
+        .lock()
+        .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+    *dict = new_dict;
+
+    println!(
+        "[save_corrections] saved {} rules to {}",
+        dict.entries().len(),
+        dict_path.display()
+    );
+    Ok(())
+}
+
 // ── Recording commands ──
 
 /// Wrapper to allow cpal::Stream in a static Mutex.
@@ -155,7 +199,13 @@ pub fn stop_recording_and_transcribe(
     };
 
     // 6. Apply corrections
-    let corrected = state.correction_dict.apply(&text);
+    let corrected = {
+        let dict = state
+            .correction_dict
+            .lock()
+            .map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
+        dict.apply(&text)
+    };
 
     // 6.5. AI polishing — dispatch to local engine or online API based on config
     let polished = if !polish_enabled {

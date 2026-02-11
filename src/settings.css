@@ -293,6 +293,90 @@ select.btn-small {
   background: #d2d2d7;
 }
 
+/* ── Corrections Dictionary ── */
+.corrections-add {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.corrections-add input {
+  flex: 1;
+  min-width: 0;
+}
+
+.corrections-arrow {
+  color: #86868b;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.corrections-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e8e8ed;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.corrections-list:empty {
+  display: none;
+}
+
+.correction-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-bottom: 1px solid #e8e8ed;
+}
+
+.correction-row:last-child {
+  border-bottom: none;
+}
+
+.correction-from {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.correction-to {
+  flex: 1;
+  color: #0071e3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.correction-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #86868b;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.correction-delete:hover {
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.corrections-empty {
+  padding: 16px;
+  text-align: center;
+  color: #86868b;
+  font-size: 12px;
+}
+
 /* ── Toast ── */
 .toast {
   position: fixed;

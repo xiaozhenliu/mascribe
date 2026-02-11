@@ -207,6 +207,93 @@ function setupPolishRadios() {
   }
 }
 
+// ── Correction Dictionary ──
+
+let corrections: [string, string][] = [];
+
+async function loadCorrections() {
+  try {
+    corrections = (await invoke("get_corrections")) as [string, string][];
+    renderCorrections();
+  } catch (e) {
+    console.error("Failed to load corrections:", e);
+  }
+}
+
+function renderCorrections() {
+  const list = document.getElementById("corrections-list")!;
+  // Clear existing content
+  list.textContent = "";
+
+  if (corrections.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "corrections-empty";
+    empty.textContent = "No rules yet / 暂无规则";
+    list.appendChild(empty);
+    return;
+  }
+
+  for (let i = 0; i < corrections.length; i++) {
+    const [from, to] = corrections[i];
+    const row = document.createElement("div");
+    row.className = "correction-row";
+
+    const fromSpan = document.createElement("span");
+    fromSpan.className = "correction-from";
+    fromSpan.textContent = from;
+
+    const arrow = document.createElement("span");
+    arrow.className = "corrections-arrow";
+    arrow.textContent = "→";
+
+    const toSpan = document.createElement("span");
+    toSpan.className = "correction-to";
+    toSpan.textContent = to;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "correction-delete";
+    deleteBtn.textContent = "✕";
+    deleteBtn.title = "Delete";
+    deleteBtn.addEventListener("click", () => {
+      corrections.splice(i, 1);
+      renderCorrections();
+    });
+
+    row.appendChild(fromSpan);
+    row.appendChild(arrow);
+    row.appendChild(toSpan);
+    row.appendChild(deleteBtn);
+    list.appendChild(row);
+  }
+}
+
+function setupCorrections() {
+  const addBtn = document.getElementById("correction-add-btn")!;
+  const fromInput = document.getElementById("correction-from") as HTMLInputElement;
+  const toInput = document.getElementById("correction-to") as HTMLInputElement;
+
+  const addRule = () => {
+    const from = fromInput.value.trim();
+    const to = toInput.value.trim();
+    if (!from) return;
+    corrections.push([from, to]);
+    fromInput.value = "";
+    toInput.value = "";
+    fromInput.focus();
+    renderCorrections();
+  };
+
+  addBtn.addEventListener("click", addRule);
+
+  // Allow pressing Enter in the "to" field to add the rule
+  toInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addRule();
+    }
+  });
+}
+
 // ── Toast notification ──
 
 function showToast(message: string, type: "success" | "error") {
@@ -264,6 +351,7 @@ async function saveConfig() {
 
   try {
     await invoke("save_config", { config: updated });
+    await invoke("save_corrections", { entries: corrections });
     showToast("Settings saved", "success");
     // Close window after brief delay
     setTimeout(async () => {
@@ -281,7 +369,9 @@ async function saveConfig() {
 window.addEventListener("DOMContentLoaded", async () => {
   setupPolishRadios();
   await loadConfig();
+  await loadCorrections();
   setupShortcutRecorder();
+  setupCorrections();
   await setupBrowse();
 
   btnSave().addEventListener("click", saveConfig);
