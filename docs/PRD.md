@@ -1,0 +1,370 @@
+# Voice Input — 产品需求文档 (PRD)
+
+## 概述
+
+**产品名称**: Voice Input (mac-voice-input)
+
+**一句话描述**: macOS 桌面应用，按住快捷键说话，本地语音转文字后自动输入到任意 App。
+
+**目标用户**: 需要在 macOS 上快速进行语音输入的用户，尤其是中英文混合输入场景。
+
+---
+
+## 背景与动机
+
+macOS 自带的语音听写功能依赖网络且准确率有限，特别是对中英混合输入支持不佳。阿里的 SenseVoice 模型在多语言语音识别上表现优异，且可完全本地运行，保障隐私。
+
+本项目旨在将 SenseVoice 模型的能力封装为一个易用的桌面工具，实现"按键说话 → 文字自动输入"的流畅体验。
+
+---
+
+## 核心功能
+
+### 1. 语音录制 (Hold-to-Talk)
+
+- 按住用户自定义的快捷键开始录音
+- 松开快捷键结束录音
+- 录音期间显示实时波形动画
+- 支持的音频格式：16kHz 单声道 PCM（内部自动转换）
+
+### 2. 语音转文字
+
+- 使用本地 SenseVoice 模型（sherpa-onnx ONNX 格式，int8 量化）
+- 支持语言：中文（普通话/粤语）、英语、日语、韩语
+- 自动语言检测，无需手动切换
+- 推理速度：约 50ms 处理 5 秒音频（Apple Silicon CPU）
+- 支持逆文本规范化（ITN），如"一百二十三"→"123"
+
+### 3. 文字插入
+
+- 将识别结果自动输入到当前获得焦点的 App
+- 实现方式：保存当前剪贴板 → 写入识别文字 → 模拟 Cmd+V 粘贴 → 恢复剪贴板
+- 兼容几乎所有 macOS 应用（包括 Chrome、VS Code、微信等）
+
+### 4. 悬浮面板
+
+- 小型悬浮窗口（约 280×120px），始终置顶
+- 无边框、半透明毛玻璃背景
+- 显示内容：
+  - 状态指示灯（空闲/录音中/处理中）
+  - 实时音频波形（录音时）
+  - 最近一次识别结果文本
+  - 设置入口（齿轮图标）
+- 可拖拽移动，记忆位置
+
+### 5. 菜单栏图标
+
+- 在 macOS 菜单栏显示应用图标
+- 图标状态反映当前应用状态
+- 右键菜单：
+  - 显示/隐藏悬浮面板
+  - 打开设置
+  - 退出应用
+- 应用不在 Dock 中显示（Accessory activation policy）
+
+### 6. 设置界面
+
+独立的设置窗口，包含以下配置项：
+
+#### 快捷键设置
+- **按键录制器组件**：用户点击输入框后按下任意键即可设置
+- 支持单键（Fn、Right Option、Right Command 等）和组合键（Cmd+Shift+Space 等）
+- 显示实际按键名称，适配不同键盘布局（兼容 Windows 键盘）
+- 默认快捷键：Right Option（在 Windows 键盘上对应右 Alt）
+
+#### 模型设置
+- 模型文件目录路径（带浏览按钮）
+- 显示当前模型信息（名称、大小、支持语言）
+- 推理线程数配置（默认 4）
+
+#### 语言设置
+- 语言偏好选择：自动检测 / 指定语言
+- 语言列表：中文、英语、日语、韩语、粤语
+
+#### 纠错词典
+- 以表格形式展示纠错规则
+- 支持添加/删除规则
+- 内置常用纠错（如 "cloud"→"Claude", "open ai"→"OpenAI"）
+
+#### 高级设置
+- AI 后处理开关（v2，暂时灰置显示"即将推出"）
+- 调试模式开关
+
+### 7. 纠错词典
+
+- 基于简单字符串替换的纠错系统
+- JSON 格式存储，可手动编辑
+- 支持通过设置界面管理
+- 在语音识别后、文字插入前应用
+
+---
+
+## 快捷键系统详细设计
+
+### 捕获机制
+
+采用 macOS CGEventTap 实现系统级按键捕获：
+
+- **CGEventTap** (kCGHIDEventTap): 在硬件层面监听按键事件
+- **监听模式** (kCGEventTapOptionListenOnly): 只监听不消费事件
+- 监听 `kCGEventFlagsChanged`（修饰键）和 `kCGEventKeyDown`/`kCGEventKeyUp`（普通键）
+
+### 支持的按键类型
+
+| 按键类型 | 示例 | macOS keycode |
+|----------|------|---------------|
+| 功能键 | Fn | 63 |
+| 修饰键 | Left/Right Option, Left/Right Command, Left/Right Control, Left/Right Shift | 各不相同 |
+| 普通键 | 空格、字母、数字 | 标准 keycode |
+| 组合键 | Cmd+Shift+Space | 修饰符 + keycode |
+
+### Windows 键盘映射
+
+| Windows 键 | macOS 映射 | 说明 |
+|-----------|----------|------|
+| Win (左/右) | Command (左/右) | 系统默认映射 |
+| Alt (左/右) | Option (左/右) | 系统默认映射 |
+| Ctrl (左/右) | Control (左/右) | 相同 |
+
+### Hold-to-Talk 行为
+
+```
+按键按下 (key down)
+  → 延迟 100ms（防抖，避免误触）
+  → 开始录音
+  → UI 切换到"录音中"状态
+
+按键松开 (key up)
+  → 停止录音
+  → 如果录音时长 < 300ms，忽略（太短，可能是误触）
+  → 如果录音时长 >= 300ms，执行转写流程
+  → UI 切换到"处理中"状态
+```
+
+---
+
+## 技术架构
+
+### 整体架构
+
+```
+┌─────────────────────────────────────┐
+│  Tauri 2.0 Desktop App              │
+│                                     │
+│  ┌───────────────────────────────┐  │
+│  │ Web Frontend (TS + Vite)      │  │
+│  │ - 悬浮面板 (index.html)       │  │
+│  │ - 设置窗口 (settings.html)    │  │
+│  │ - 波形可视化 (Canvas)         │  │
+│  │ - 按键录制器组件              │  │
+│  └────────────┬──────────────────┘  │
+│               │ Tauri IPC (invoke)  │
+│  ┌────────────▼──────────────────┐  │
+│  │ Rust Backend                  │  │
+│  │                               │  │
+│  │ ┌─ audio/                     │  │
+│  │ │  capture.rs    麦克风采集    │  │
+│  │ │  resampler.rs  重采样       │  │
+│  │ │                             │  │
+│  │ ┌─ hotkey/                    │  │
+│  │ │  mod.rs        快捷键监听   │  │
+│  │ │                             │  │
+│  │ ┌─ recognition/               │  │
+│  │ │  engine.rs     SenseVoice   │  │
+│  │ │                             │  │
+│  │ ┌─ insertion/                 │  │
+│  │ │  clipboard.rs  文字插入     │  │
+│  │ │                             │  │
+│  │ ┌─ correction/                │  │
+│  │ │  dictionary.rs 纠错词典     │  │
+│  │ │                             │  │
+│  │ config.rs       配置持久化    │  │
+│  │ commands.rs     IPC 命令      │  │
+│  │ state.rs        应用状态      │  │
+│  │ tray.rs         菜单栏图标    │  │
+│  └───────────────────────────────┘  │
+└─────────────────────────────────────┘
+```
+
+### 核心依赖
+
+**Rust (src-tauri/Cargo.toml)**:
+| Crate | 用途 |
+|-------|------|
+| tauri 2.x | 应用框架 |
+| sherpa-rs | SenseVoice 语音识别 |
+| cpal | 跨平台音频采集 |
+| arboard | 剪贴板操作 |
+| core-graphics | CGEventTap, CGEvent |
+| core-foundation | CFRunLoop |
+| serde / serde_json | 序列化 |
+| tokio | 异步运行时 |
+| dirs | 系统目录 |
+| anyhow | 错误处理 |
+
+**Frontend (package.json)**:
+| Package | 用途 |
+|---------|------|
+| vite | 构建工具 |
+| typescript | 类型安全 |
+| @tauri-apps/api | Tauri 前端 API |
+
+### 数据流
+
+```
+用户按住快捷键
+  → CGEventTap 检测按键按下
+  → 100ms 防抖
+  → 启动 cpal 麦克风输入流
+  → 音频 PCM 数据写入 Arc<Mutex<Vec<f32>>> 缓冲区
+  → 每 10ms 计算 RMS 振幅 → Tauri event → 前端波形渲染
+
+用户松开快捷键
+  → CGEventTap 检测按键松开
+  → 停止 cpal 输入流，获取完整音频缓冲区
+  → 校验时长（< 300ms 则丢弃）
+  → tokio::spawn_blocking:
+    1. 如采样率非 16kHz，进行重采样
+    2. sherpa-rs SenseVoiceRecognizer.transcribe(16000, &samples)
+       → 返回 (text: String, lang: String)
+    3. CorrectionDictionary.apply(text) → corrected_text
+    4. (v2) AI 后处理 → final_text
+    5. insertion::insert_text(final_text):
+       a. 保存当前剪贴板内容
+       b. 设置识别文字到剪贴板
+       c. 等待 50ms
+       d. CGEvent 模拟 Cmd+V
+       e. 等待 100ms
+       f. 恢复之前的剪贴板内容
+  → Tauri event: "transcription-complete" → 前端显示结果
+```
+
+---
+
+## 项目结构
+
+```
+mac-voice-input/
+├── docs/
+│   └── PRD.md                    # 本文档
+├── src-tauri/                    # Rust 后端
+│   ├── Cargo.toml
+│   ├── tauri.conf.json
+│   ├── capabilities/
+│   │   └── default.json
+│   ├── icons/
+│   │   ├── icon.png
+│   │   ├── icon.icns
+│   │   └── tray-icon.png        # 22x22 菜单栏模板图标
+│   ├── src/
+│   │   ├── main.rs              # 入口
+│   │   ├── lib.rs               # Tauri 应用构建和初始化
+│   │   ├── commands.rs          # Tauri IPC 命令处理
+│   │   ├── state.rs             # 应用共享状态
+│   │   ├── config.rs            # 配置持久化
+│   │   ├── tray.rs              # 菜单栏图标
+│   │   ├── audio/
+│   │   │   ├── mod.rs
+│   │   │   ├── capture.rs       # cpal 麦克风采集
+│   │   │   └── resampler.rs     # 重采样到 16kHz
+│   │   ├── hotkey/
+│   │   │   ├── mod.rs
+│   │   │   └── listener.rs      # CGEventTap 快捷键监听
+│   │   ├── recognition/
+│   │   │   ├── mod.rs
+│   │   │   └── engine.rs        # sherpa-rs SenseVoice 封装
+│   │   ├── insertion/
+│   │   │   ├── mod.rs
+│   │   │   └── clipboard.rs     # 剪贴板 + Cmd+V 模拟
+│   │   └── correction/
+│   │       ├── mod.rs
+│   │       └── dictionary.rs    # JSON 纠错词典
+│   └── build.rs
+├── src/                          # Web 前端
+│   ├── index.html                # 悬浮面板
+│   ├── settings.html             # 设置窗口
+│   ├── main.ts                   # 面板逻辑
+│   ├── settings.ts               # 设置逻辑
+│   ├── styles/
+│   │   ├── panel.css             # 面板样式
+│   │   └── settings.css          # 设置样式
+│   └── lib/
+│       ├── waveform.ts           # Canvas 波形渲染
+│       ├── tauri-api.ts          # Tauri invoke 封装
+│       └── types.ts              # TypeScript 类型定义
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── CLAUDE.md                     # 项目开发指引
+├── .gitignore
+└── README.md
+```
+
+---
+
+## 所需系统权限
+
+| 权限 | 用途 | 触发时机 |
+|------|------|----------|
+| 麦克风 (Microphone) | 录制语音 | 首次录音时弹窗 |
+| 辅助功能 (Accessibility) | 模拟 Cmd+V 按键 | 首次文字插入时 |
+| 输入监控 (Input Monitoring) | CGEventTap 捕获快捷键 | 应用启动时 |
+
+应用应在首次启动时引导用户开启所需权限，并在权限缺失时显示友好提示。
+
+---
+
+## 非功能性需求
+
+| 指标 | 目标 |
+|------|------|
+| 识别延迟 | < 500ms（5 秒音频，含转写+纠错+插入） |
+| 内存占用 | < 500MB（含模型常驻内存） |
+| 模型加载 | < 2s（首次启动） |
+| 应用体积 | < 50MB（不含模型文件） |
+| 隐私 | 完全本地运行，无数据上传 |
+| 兼容性 | macOS 13.0+ (Ventura 及以上) |
+
+---
+
+## 外部依赖
+
+| 依赖 | 路径 | 说明 |
+|------|------|------|
+| SenseVoice 模型 | `~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/` | int8 量化 ONNX 模型，约 228MB |
+| 模型文件 | `model.int8.onnx` | 主模型 |
+| 词表文件 | `tokens.txt` | Token 词表 |
+
+用户需自行确保模型文件存在。应用设置中提供模型路径配置。
+
+---
+
+## 未来规划 (v2+)
+
+### AI 后处理
+- 对识别结果进行智能纠错和润色
+- 支持两种模式：
+  - API 模式：调用远程 LLM API（OpenAI/Claude 等兼容接口）
+  - 本地模式：通过 Ollama 等调用本地模型
+- 可在设置中选择模式和配置参数
+
+### 实时流式识别
+- 边说边显示文字（SenseVoice 目前为离线模式，需评估流式支持）
+
+### 多模型支持
+- 允许用户选择不同的语音模型
+- 支持 Whisper 等替代模型
+
+### 自动标点优化
+- 智能插入标点符号
+- 基于上下文的断句优化
+
+---
+
+## 参考项目
+
+- [Superwhisper](https://superwhisper.com/) — 商业 macOS 语音输入工具
+- [MacWhisper](https://goodsnooze.gumroad.com/l/macwhisper) — 本地 Whisper 转写工具
+- [VoiceInk](https://github.com/VoiceInk/VoiceInk) — 开源 macOS 语音听写
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) — 语音识别推理框架
+- [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) — 阿里多语言语音模型

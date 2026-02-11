@@ -1,0 +1,23 @@
+# Rust
+/src-tauri/target/
+
+# Node
+/node_modules/
+/dist/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+
+# Build artifacts
+*.dmg
+*.app
