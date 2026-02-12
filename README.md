@@ -1,12 +1,12 @@
-# Voice Input for macOS
+# Voice Input
 
-Local speech-to-text tool for macOS. Press a hotkey, speak, and the transcribed text is automatically pasted into any app.
+Local speech-to-text tool for macOS and Windows. Press a hotkey, speak, and the transcribed text is automatically pasted into any app.
 
 Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) running locally via [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Optional AI text polishing via local [Qwen 2.5](https://huggingface.co/Qwen) model or any OpenAI-compatible API. No cloud required — all core features run entirely on your machine.
 
 ---
 
-**macOS 本地语音输入工具。** 按下快捷键说话，识别结果自动输入到任意 App。基于阿里 SenseVoice 模型本地运行，可选 Qwen 2.5 本地模型或在线 API 进行 AI 润色。核心功能完全离线，数据不出机器。
+**本地语音输入工具（macOS / Windows）。** 按下快捷键说话，识别结果自动输入到任意 App。基于阿里 SenseVoice 模型本地运行，可选 Qwen 2.5 本地模型或在线 API 进行 AI 润色。核心功能完全离线，数据不出机器。
 
 ## Features / 功能
 
@@ -16,7 +16,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 - **AI polishing (dual-engine)** — Local Qwen 2.5 model or any OpenAI-compatible API for punctuation, grammar, and homophone correction
 - **Screen OCR context** — Captures screenshot and extracts text via native OS OCR (macOS Vision framework / Windows.Media.Ocr) or Ollama GLM-OCR; injects screen text into the polishing prompt for accurate homophone correction
 - **Mixed-language friendly** — Preserves Chinese-English code-switching as spoken
-- **Universal paste** — Works in any macOS app (Chrome, VS Code, WeChat, etc.)
+- **Universal paste** — Works in any app (Chrome, VS Code, WeChat, etc.)
 - **Configurable hotkey** — Set any key or combo; supports special keys like ContextMenu via presets
 - **Correction dictionary** — Auto-fix common transcription errors with customizable JSON rules
 - **Launch at Login** — Optional autostart via macOS Login Items, toggled from tray menu
@@ -30,7 +30,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 - **AI 润色（双引擎）** — 本地 Qwen 2.5 模型或在线 OpenAI 兼容 API，自动修正标点、语法和同音字
 - **屏幕 OCR 上下文** — 截取当前窗口，通过系统原生 OCR（macOS Vision 框架 / Windows.Media.Ocr）或 Ollama GLM-OCR 提取屏幕文字，注入润色提示词中，精准纠正同音字
 - **中英混合友好** — 保留说话时的中英混杂，不自动翻译
-- **通用粘贴** — 适用于任何 macOS 应用
+- **通用粘贴** — 适用于任何应用
 - **自定义快捷键** — 支持任意单键或组合键，特殊键（如 ContextMenu）可通过预设选择
 - **纠错词典** — 自定义 JSON 规则自动修正常见识别错误
 - **开机启动** — 可选登录时自动启动，在托盘菜单中切换
@@ -38,16 +38,22 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 
 ## Requirements / 系统要求
 
+**macOS:**
 - macOS 12+ (**Apple Silicon required** — sherpa-onnx runtime libraries are arm64 only)
+- Microphone, Accessibility, and Input Monitoring permissions
+- Screen Recording permission (optional, for OCR context)
+
+**Windows:**
+- Windows 10 1507+
+- Chinese OCR language pack (optional, for Screen OCR — see below)
+
+**Both platforms:**
 - ~1.2 GB RAM for SenseVoice model
 - ~1.1 GB additional RAM if using local AI polishing (Qwen 2.5)
-- Microphone permission
-- Accessibility permission (for Cmd+V simulation)
-- Input Monitoring permission (for global hotkey capture)
 
 ## Prerequisites / 前置要求
 
-### For building from source / 从源码构建的前置条件
+### macOS — building from source / 从源码构建
 
 | Dependency | Install command | Purpose |
 |------------|----------------|---------|
@@ -55,6 +61,19 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 | **Node.js 18+** | `brew install node` or [nodejs.org](https://nodejs.org/) | Build frontend & run Tauri CLI |
 | **CMake** | `brew install cmake` | Compile llama.cpp (for AI polishing) & sherpa-onnx |
 | **Xcode CLI Tools** | `xcode-select --install` | C/C++ compiler, Metal framework |
+
+### Windows — building from source
+
+| Dependency | Install command | Purpose |
+|------------|----------------|---------|
+| **Rust toolchain** | `winget install Rustlang.Rustup` | Compile Rust backend |
+| **Node.js 18+** | `winget install OpenJS.NodeJS` | Build frontend & run Tauri CLI |
+| **VS Build Tools 2022** | `winget install Microsoft.VisualStudio.2022.BuildTools` | C/C++ compiler (select "Desktop development with C++") |
+| **CMake** | Included with VS Build Tools, or `winget install Kitware.CMake` | Compile llama.cpp & sherpa-onnx |
+
+> See [Windows Build Guide](docs/windows-build-guide.md) for detailed step-by-step instructions.
+>
+> 详细的 Windows 构建步骤请参考 [Windows 构建指南](docs/windows-build-guide.md)。
 
 ### Models / 模型下载
 
@@ -97,22 +116,45 @@ Screen OCR extracts text from your current window and injects it into the AI pol
 
 屏幕 OCR 从当前窗口提取可见文字，注入 AI 润色提示词中作为上下文，帮助润色模型准确区分同音字。
 
-**Option A: macOS Built-in (Recommended / 推荐)**
+**Option A: Native OS OCR (Recommended / 推荐)**
 
-Uses the macOS Vision framework (`VNRecognizeTextRequest`) via the Neural Engine. ~0.6s per screenshot, zero setup, no extra downloads.
+Uses the built-in OS OCR engine — zero setup on macOS, one-time language pack install on Windows.
 
-使用 macOS Vision 框架，利用 Neural Engine 加速。每次截图仅需约 0.6 秒，无需任何额外安装。
+| Platform | Engine | Speed | Setup |
+|----------|--------|-------|-------|
+| macOS | Vision framework (`VNRecognizeTextRequest`) | ~0.6s | None (built-in) |
+| Windows | `Windows.Media.Ocr` (same as PowerToys Text Extractor) | ~50-200ms | Install Chinese language pack |
 
-In Settings, select **Screen OCR → macOS Built-in**. That's it.
+使用系统内置 OCR 引擎。macOS 无需任何配置；Windows 需安装中文语言包。
+
+**Windows OCR language pack setup / Windows OCR 语言包安装：**
+
+```powershell
+# PowerShell (Administrator / 管理员)
+Add-WindowsCapability -Online -Name Language.OCR~~~zh-Hans~0.0.1.0
+```
+
+Or: Settings → Language & Region → add Chinese (Simplified). English OCR is pre-installed.
+
+或：设置 → 语言和区域 → 添加中文（简体）。英文 OCR 已预装。
+
+> The zh-Hans OCR engine natively handles mixed Chinese/English/code text — no separate English engine needed.
+>
+> 中文 OCR 引擎天然支持中英文混合识别（代码、注释、网页等），无需单独配置英文引擎。
+
+In Settings, select **Screen OCR → macOS Built-in** (macOS) or **Windows Built-in** (Windows). That's it.
 
 **Option B: GLM-OCR via Ollama**
 
-Alternative OCR using GLM-OCR model (~2.2 GB). Slower (~5–7s) but works on non-Apple-Silicon Macs or for custom models. Requires [Ollama](https://ollama.com/).
+Alternative OCR using GLM-OCR model (~2.2 GB). Slower (~5–7s) but useful for custom models. Requires [Ollama](https://ollama.com/).
 
 ```bash
-brew install ollama       # Install Ollama
-ollama serve              # Start service
-ollama pull glm-ocr       # Download model (~2.2 GB)
+# macOS
+brew install ollama && ollama serve && ollama pull glm-ocr
+
+# Windows (after installing Ollama from https://ollama.com/)
+ollama serve
+ollama pull glm-ocr
 ```
 
 In Settings, select **Screen OCR → Ollama OCR**, then configure endpoint (`http://localhost:11434/v1`) and model (`glm-ocr`).
@@ -136,12 +178,14 @@ OCR 从当前窗口提取可见文字，注入 AI 润色提示词中作为上下
 
 ### Download / 下载
 
-Download the latest `.dmg` from [Releases](../../releases) and drag to Applications.
+Download the latest release from [Releases](../../releases):
+- **macOS**: `.dmg` → drag to Applications
+- **Windows**: `.msi` or `.exe` installer
 
 ### Build from Source / 从源码构建
 
 ```bash
-# 1. Install prerequisites (see table above)
+# 1. Install prerequisites (see tables above)
 # 1. 安装前置条件（见上方表格）
 
 # 2. Clone and build / 克隆并构建
@@ -151,21 +195,23 @@ npm install
 npx tauri build
 ```
 
-The built app will be in `src-tauri/target/release/bundle/macos/`.
+Output:
+- macOS: `src-tauri/target/release/bundle/macos/Voice Input.app`
+- Windows: `src-tauri/target/release/bundle/msi/*.msi`
 
 ## Usage / 使用方法
 
-1. Launch Voice Input — it appears as a menu bar icon (no Dock icon)
-2. Grant Microphone, Accessibility, and Input Monitoring permissions when prompted
-3. Press **Alt+Space** (default) to start recording
+1. Launch Voice Input — it appears as a menu bar (macOS) / system tray (Windows) icon
+2. Grant permissions when prompted (macOS: Microphone, Accessibility, Input Monitoring)
+3. Press the hotkey (default **Alt+Space**) to start recording
 4. Speak in any supported language
 5. Press again to stop — text is automatically pasted at your cursor
 
 ---
 
-1. 启动 Voice Input — 仅在菜单栏显示图标
-2. 授予麦克风、辅助功能和输入监控权限
-3. 按 **Alt+Space**（默认）开始录音
+1. 启动 Voice Input — 在菜单栏（macOS）/ 系统托盘（Windows）显示图标
+2. 授予所需权限（macOS：麦克风、辅助功能、输入监控）
+3. 按下快捷键（默认 **Alt+Space**）开始录音
 4. 用任何支持的语言说话
 5. 再按一次停止 — 文字自动粘贴到光标位置
 
@@ -178,9 +224,9 @@ The built app will be in `src-tauri/target/release/bundle/macos/`.
 | AI Polishing (local) | Qwen 2.5 1.5B Instruct via llama-cpp-2 |
 | AI Polishing (online) | OpenAI-compatible API via ureq |
 | Screen OCR | Native OS OCR (macOS Vision / Windows.Media.Ocr) or GLM-OCR via Ollama |
-| Audio | cpal (CoreAudio) |
-| Hotkey | CGEventTap (native) + tauri-plugin-global-shortcut |
-| Text Insertion | Clipboard + CGEvent Cmd+V |
+| Audio | cpal (CoreAudio on macOS, WASAPI on Windows) |
+| Hotkey | CGEventTap (macOS) / SetWindowsHookEx (Windows) + tauri-plugin-global-shortcut |
+| Text Insertion | Clipboard + Cmd+V (macOS) / Ctrl+V (Windows) |
 | Frontend | TypeScript + Vite (vanilla) |
 
 ## Development / 开发
@@ -205,9 +251,9 @@ src-tauri/src/           Rust backend
   polishing/online.rs    AI text polishing (OpenAI-compatible API)
   insertion/clipboard.rs Clipboard paste simulation
   correction/dictionary.rs  Text correction rules
-  hotkey/mod.rs          CGEventTap native key listener
-  ocr/                   Native OCR (macOS Vision framework)
-  permissions.rs         macOS TCC permission helpers
+  hotkey/                Native key listener (CGEventTap on macOS, SetWindowsHookEx on Windows)
+  ocr/                   Native OCR (macOS Vision / Windows.Media.Ocr)
+  permissions.rs         Permission helpers (macOS TCC / Windows stubs)
   tray.rs                Menu bar tray icon
 
 src/                     Web frontend
@@ -221,12 +267,16 @@ src/                     Web frontend
 
 ## Permissions / 权限说明
 
+**macOS** requires explicit permissions:
+
 | Permission | Why / 用途 |
 |-----------|-----------|
 | Microphone | Record audio / 录制音频 |
 | Accessibility | Simulate Cmd+V paste / 模拟粘贴按键 |
 | Input Monitoring | System-level hotkey capture via CGEventTap / 全局快捷键捕获 |
 | Screen Recording | Capture screenshots for OCR context (optional) / 截图用于 OCR 上下文（可选） |
+
+**Windows** handles permissions automatically — microphone access is prompted on first use, other features require no special permissions.
 
 ## License
 
