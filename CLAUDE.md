@@ -13,7 +13,7 @@ macOS 语音输入工具 — 按住快捷键说话，本地转写后自动输入
 - **Serialization**: serde + serde_json
 - **AI Polishing (local)**: Qwen 2.5 1.5B Instruct (GGUF) via llama-cpp-2 crate
 - **AI Polishing (online)**: OpenAI-compatible chat completions API via ureq (sync HTTP)
-- **Screen OCR**: GLM-OCR via Ollama (OpenAI-compatible API at localhost:11434)
+- **Screen OCR**: macOS Vision framework (native, ~0.6s) or GLM-OCR via Ollama (fallback)
 
 ## Key Paths
 
@@ -46,6 +46,7 @@ src-tauri/src/         Rust backend
   recognition/         sherpa-rs SenseVoice wrapper
   insertion/           Clipboard paste + Cmd+V simulation
   correction/          JSON-based text correction dictionary
+  ocr/                 Native OCR (macOS Vision framework VNRecognizeTextRequest)
   polishing/           AI text polishing (dual-engine)
     engine.rs          Local GGUF model (llama-cpp-2, ChatML/Gemma auto-detect)
     online.rs          OpenAI-compatible API client (ureq, sync HTTP)
@@ -85,20 +86,23 @@ src/                   Web frontend (TypeScript)
 ## AI Polishing Pipeline
 
 ```
-screenshot → OCR (GLM-OCR via Ollama) → screen context text (optional)
-                                              ↓
+screenshot → OCR (native Vision or Ollama) → screen context text (optional)
+                                                    ↓
 transcribe → corrections → polish(mode) + screen context → insert
                             ├── Local:  llama-cpp-2 (Qwen 2.5 1.5B, ChatML prompt)
                             └── Online: ureq HTTP POST (OpenAI /chat/completions)
 ```
 
 - **Two-step OCR→Polish pipeline** (when Screen OCR is enabled):
-  1. Screenshot → `ocr_screenshot()` calls GLM-OCR via Ollama → extracted screen text
-  2. Screen text injected into polish prompt as `--- 当前屏幕内容 (OCR) ---` context
+  1. Screenshot → OCR (native `VNRecognizeTextRequest` or GLM-OCR via Ollama) → extracted screen text
+  2. Screen text injected into polish prompt with `[SCREEN CONTEXT]` labels (clearly separated from `[TRANSCRIPT]`)
   3. Polishing model uses screen context to correct homophones (e.g., "把" vs "八")
+  - **OCR modes**: `vision_mode` = "native" (macOS Vision, ~0.6s), "api" (Ollama, ~5-7s), or "disabled"
+  - **Native OCR** uses objc2 `msg_send!` to call Vision framework, supports zh-Hans/zh-Hant/en-US/ja-JP/ko-KR
   - **OCR context only injected for online API mode** — local Qwen 2.5 1.5B has ~512 token batch limit, too small for extra context
+  - **Output validation**: rejects API output > 3× input length + 20 chars (prevents OCR content leakage)
   - OCR text truncated to 500 chars to keep prompt reasonable
-  - Config fields: `vision_mode` ("disabled"/"api"), `ocr_endpoint`, `ocr_model`
+  - Config fields: `vision_mode` ("disabled"/"native"/"api"), `ocr_endpoint`, `ocr_model`
 - **Dual-engine**: user chooses "Local Model", "Online API", or "Off" in Settings
 - **Local model**: Qwen 2.5 1.5B Instruct GGUF (~1.1GB), loaded once at startup via llama-cpp-2
   - Auto-detects chat template from filename: "qwen" → ChatML, otherwise Gemma

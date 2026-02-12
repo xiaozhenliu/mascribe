@@ -5,20 +5,25 @@ All notable changes to Voice Input are documented here.
 ## Unreleased
 
 ### Added
-- **Screen OCR context** — Two-step pipeline: screenshot → GLM-OCR (via Ollama) extracts screen text → injected into AI polishing prompt for homophone correction (e.g., "把" vs "八")
-- **OCR settings** — Configurable OCR endpoint (default: `http://localhost:11434/v1`) and model (default: `glm-ocr`) in Settings
+- **Native macOS Vision OCR** — Uses `VNRecognizeTextRequest` via Apple's Neural Engine for screen text recognition; ~0.6s vs 5–7s with Ollama GLM-OCR (10x speedup). No external dependencies required — zero setup on macOS
+- **Screen OCR context** — Two-step pipeline: screenshot → OCR extracts screen text → injected into AI polishing prompt for homophone correction (e.g., "把" vs "八")
+- **OCR settings** — Three modes: "macOS Built-in" (native, recommended), "Ollama OCR" (GLM-OCR), or "Disabled"
 - **Launch at Login** — "Launch at Login" checkbox in tray menu via `tauri-plugin-autostart` (macOS Login Items)
 - **Correction dictionary** — Settings UI for managing auto-replace rules (from → to), applied after transcription
 - **Shortcut presets** — Dropdown for special keys (ContextMenu, F13–F15) that can't be captured via keydown
 - **Sticky settings header** — Header stays visible while scrolling long settings page
 
 ### Changed
-- **Polish prompt** — Improved mixed Chinese/English handling: no longer translates between languages
+- **Polish prompt restructured** — Transcript and OCR context are now clearly labeled with `[TRANSCRIPT START/END]` and `[SCREEN CONTEXT]` markers, preventing models from regurgitating OCR content
+- **Output length validation** — Online API responses exceeding 3× input length + 20 chars are rejected (falls back to raw transcript), preventing OCR content leakage
 - **Settings window** — Now resizable with minimum size constraint; removed Cancel button (close window instead)
 - **Vision → Screen OCR** — Renamed "Vision Model" settings to "Screen OCR"; removed local vision model option (stub), replaced with practical OCR-only pipeline
 - **Hotkey event swallowing** — CGEventTap changed from `ListenOnly` to `Default` mode, returns `None` on match to prevent ContextMenu key from leaking to other apps
+- **Local polish context size** — Bumped llama-cpp context/batch from 1024/512 to 2048/2048
 
 ### Fixed
+- **Online polisher crash** — `#[serde(flatten)]` on `ChatMessage.content` caused panic when serializing `ChatContent::Text(String)` via ureq; replaced with regular field + explicit `serde_json::to_value()` serialization
+- **ContextMenu right-click leak** — ContextMenu key triggers both KeyDown and RightMouseDown on macOS; now suppresses right-click events within 100ms of hotkey press via CGEventTap
 - **Crash on local polish with OCR** — OCR context is now only injected for online API mode; local Qwen 2.5 model has ~512 token batch limit, extra context caused `GGML_ASSERT` crash
 - **Floating window position** — Use `primary_monitor()` instead of `current_monitor()` (which returns None for hidden windows); add monitor position offset for multi-monitor support
 
