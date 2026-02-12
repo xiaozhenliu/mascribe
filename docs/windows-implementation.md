@@ -335,15 +335,43 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
 
 ---
 
-## 6. Phase 2: 本地多模态模型支持
+## 6. 屏幕 OCR 模块
 
-### 6.1 实现状态
+### 6.1 当前状态
+
+macOS 版本已实现原生 OCR（`src/ocr/macos.rs`），使用 Vision 框架 `VNRecognizeTextRequest`，约 0.6 秒完成识别。
+
+Windows 版本 **暂未实现** 原生 OCR（`src/ocr/mod.rs` 返回 `"Native OCR not supported on Windows"`），可使用 Ollama API 作为替代方案。
+
+### 6.2 OCR 工作流程
+
+```
+截图 → OCR (macOS 原生 / Ollama API) → 屏幕文字
+                                             ↓
+语音 → SenseVoice → 纠错词典 → AI 润色 + 屏幕文字上下文 → 粘贴输出
+```
+
+- OCR 上下文仅在「在线 API」润色模式下使用（本地 Qwen 2.5 模型上下文容量不足）
+- OCR 结果截断至 500 字符
+- 润色输出超过输入长度 3 倍 + 20 字符时被拒绝（防止 OCR 内容泄漏）
+
+### 6.3 Windows OCR 可选实现方案
+
+1. **Windows OCR API** (`Windows.Media.Ocr`) — WinRT API，需要 `windows` crate 的 `Media_Ocr` feature
+2. **Tesseract** — 开源 OCR 引擎，需要额外安装
+3. **Ollama API** — 已支持，无需额外开发
+
+---
+
+## 7. Phase 2: 本地多模态模型支持
+
+### 7.1 实现状态
 
 > **状态**: ✅ 基础框架已实现（2024-02-12）
 >
 > **注意**: 当前为 stub 实现，完整后端需要 ONNX Runtime 或 llama.cpp vision 支持
 
-### 6.2 已完成工作
+### 7.2 已完成工作
 
 #### Vision 模型配置
 - ✅ `config.rs` 添加 `vision_model_path`, `vision_mode`, `vision_max_image_size` 字段
@@ -373,7 +401,7 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
   - `updateVisionVisibility()` 控制 UI 显示
   - 保存/加载配置
 
-### 6.3 待完成工作
+### 7.3 待完成工作
 
 #### 后端实现（需要进一步调研）
 1. **ONNX Runtime 后端**
@@ -386,13 +414,13 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
    - 或手动编译 llama.cpp vision 分支
    - 需要处理 `mmproj.bin` multimodal projector
 
-### 6.4 模型推荐（RTX 4060 8GB）
+### 7.4 模型推荐（RTX 4060 8GB）
 - MiniCPM-V 2.6 INT4 (6-8GB VRAM)
 - Qwen2-VL 7B INT4 (6-8GB VRAM)
 
 ---
 
-## 7. 文件清单
+## 8. 文件清单
 
 ### 新建文件
 - `src/hotkey/keycode.rs` - 键码抽象
@@ -402,6 +430,8 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
 - `src/insertion/windows.rs` - Windows 文本插入
 - `src/screenshot/macos.rs` - macOS 截图
 - `src/screenshot/windows.rs` - Windows 截图
+- `src/ocr/mod.rs` - OCR 跨平台接口
+- `src/ocr/macos.rs` - macOS Vision 框架 OCR 实现
 - `src/vision/mod.rs` - Vision 模型接口（Phase 2）
 - `docs/windows-migration-plan.md` - 迁移计划
 - `docs/windows-implementation.md` - 本文档
@@ -423,7 +453,7 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
 
 ---
 
-## 8. 更新记录
+## 9. 更新记录
 
 ### 2024-02-12
 - 添加 `ContextMenu` 键支持
@@ -437,7 +467,7 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
 - 更新 `settings.ts` 添加 vision 设置逻辑
 - 在 `commands.rs` 集成 vision 处理流程（优先 vision，失败回退到文本润色）
 
-## 9. 总结
+## 10. 总结
 
 本次迁移将原本 macOS 专用的语音输入工具改造为跨平台应用，主要工作包括：
 

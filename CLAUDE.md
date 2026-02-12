@@ -113,6 +113,7 @@ transcribe → corrections → polish(mode) + screen context → insert
   - Endpoint auto-appends `/chat/completions` if missing
   - Works with Step-Fun, DeepSeek, Qwen-Turbo, Groq, OpenAI, etc.
   - 10s read / 5s write timeout via ureq
+  - HTTP error responses log response body (up to 300 chars) for diagnosing model name / endpoint issues
 - **Prompt template**: supports `{text}` and `{lang}` placeholders
   - `{lang}` is auto-filled from SenseVoice detection (zh, en, ja, etc.)
 - Config fields: `polish_enabled`, `polish_mode` ("local"/"api"), `api_endpoint`, `api_key`, `api_model`

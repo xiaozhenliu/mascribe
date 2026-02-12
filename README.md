@@ -38,7 +38,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 
 ## Requirements / 系统要求
 
-- macOS 12+ (Apple Silicon recommended, Intel also supported)
+- macOS 12+ (**Apple Silicon required** — sherpa-onnx runtime libraries are arm64 only)
 - ~1.2 GB RAM for SenseVoice model
 - ~1.1 GB additional RAM if using local AI polishing (Qwen 2.5)
 - Microphone permission

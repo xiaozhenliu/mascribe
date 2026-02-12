@@ -18,14 +18,17 @@ All notable changes to Voice Input are documented here.
 - **Output length validation** — Online API responses exceeding 3× input length + 20 chars are rejected (falls back to raw transcript), preventing OCR content leakage
 - **Settings window** — Now resizable with minimum size constraint; removed Cancel button (close window instead)
 - **Vision → Screen OCR** — Renamed "Vision Model" settings to "Screen OCR"; removed local vision model option (stub), replaced with practical OCR-only pipeline
-- **Hotkey event swallowing** — CGEventTap changed from `ListenOnly` to `Default` mode, returns `None` on match to prevent ContextMenu key from leaking to other apps
+- **Hotkey event swallowing** — CGEventTap changed from `ListenOnly` to `Default` mode, returns `None` on match to prevent hotkey from leaking to other apps
 - **Local polish context size** — Bumped llama-cpp context/batch from 1024/512 to 2048/2048
+- **API error logging** — Online polisher now extracts and logs HTTP response body on errors (up to 300 chars) for easier debugging of model name / endpoint issues
 
 ### Fixed
 - **Online polisher crash** — `#[serde(flatten)]` on `ChatMessage.content` caused panic when serializing `ChatContent::Text(String)` via ureq; replaced with regular field + explicit `serde_json::to_value()` serialization
-- **ContextMenu right-click leak** — ContextMenu key triggers both KeyDown and RightMouseDown on macOS; now suppresses right-click events within 100ms of hotkey press via CGEventTap
 - **Crash on local polish with OCR** — OCR context is now only injected for online API mode; local Qwen 2.5 model has ~512 token batch limit, extra context caused `GGML_ASSERT` crash
 - **Floating window position** — Use `primary_monitor()` instead of `current_monitor()` (which returns None for hidden windows); add monitor position offset for multi-monitor support
+
+### Known Issues
+- **ContextMenu key triggers right-click in some apps** — On macOS, the ContextMenu key (mapped to F16) can trigger a right-click context menu in certain apps (e.g. Terminal). The hotkey itself works correctly, but the right-click side effect cannot be suppressed via CGEventTap as the event goes through a different system path. Other apps (browsers, editors) are unaffected.
 
 ## 0.2.0
 
