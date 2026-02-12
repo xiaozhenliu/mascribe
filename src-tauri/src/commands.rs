@@ -288,8 +288,14 @@ pub fn stop_recording_and_transcribe(
             } else {
                 polish_prompt.clone()
             };
-            let combined = format!("{}\n\n--- 当前屏幕内容 (OCR) ---\n{}\n--- 屏幕内容结束 ---",
-                base, truncated);
+            // Inject OCR as a separate reference block AFTER {text},
+            // with clear instructions not to include it in output
+            let labeled_text = format!(
+                "[TRANSCRIPT START]\n{}\n[TRANSCRIPT END]\n\n\
+                 [SCREEN CONTEXT - reference only, do NOT output this]\n{}\n[END SCREEN CONTEXT]",
+                "{text}", truncated
+            );
+            let combined = base.replace("{text}", &labeled_text);
             println!("[ocr] injected {} chars of screen context into polish prompt", truncated.len());
             combined
         } else {

@@ -42,7 +42,6 @@ struct ImageUrl {
 #[derive(Serialize)]
 struct ChatMessage {
     role: String,
-    #[serde(flatten)]
     content: ChatContent,
 }
 
@@ -143,17 +142,14 @@ impl OnlinePolisher {
         );
 
         let start = std::time::Instant::now();
+        let json_body = serde_json::to_value(&request)
+            .map_err(|e| anyhow::anyhow!("Failed to serialize request: {}", e))?;
         let response = self
             .agent
             .post(&self.endpoint)
             .set("Authorization", &format!("Bearer {}", self.api_key))
             .set("Content-Type", "application/json")
-            .send_json(ureq::json!({
-                "model": request.model,
-                "messages": request.messages,
-                "temperature": request.temperature,
-                "max_tokens": request.max_tokens,
-            }))
+            .send_json(json_body)
             .map_err(|e| anyhow::anyhow!("API request failed: {}", e))?;
 
         let body: ChatResponse = response
@@ -175,6 +171,18 @@ impl OnlinePolisher {
 
         if result.is_empty() {
             anyhow::bail!("API returned empty response");
+        }
+
+        // Reject output that's much longer than input — likely the model
+        // regurgitated OCR context or other prompt content
+        let input_chars = text.chars().count();
+        let output_chars = result.chars().count();
+        if output_chars > input_chars * 3 + 20 {
+            println!(
+                "[polish:api] REJECTED: output too long ({} chars vs input {} chars), using original",
+                output_chars, input_chars
+            );
+            return Ok(text.to_string());
         }
 
         Ok(result)
