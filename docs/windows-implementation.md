@@ -355,11 +355,55 @@ Windows 版本 **暂未实现** 原生 OCR（`src/ocr/mod.rs` 返回 `"Native OC
 - OCR 结果截断至 500 字符
 - 润色输出超过输入长度 3 倍 + 20 字符时被拒绝（防止 OCR 内容泄漏）
 
-### 6.3 Windows OCR 可选实现方案
+### 6.3 Windows 原生 OCR 实现方案
 
-1. **Windows OCR API** (`Windows.Media.Ocr`) — WinRT API，需要 `windows` crate 的 `Media_Ocr` feature
-2. **Tesseract** — 开源 OCR 引擎，需要额外安装
-3. **Ollama API** — 已支持，无需额外开发
+使用 `Windows.Media.Ocr` WinRT API（与 PowerToys Text Extractor 相同的引擎）。
+
+#### 系统要求
+- Windows 10 1507+ (API 自带，无需额外安装)
+- 需要安装对应语言的 OCR 语言包
+  - 英文通常预装
+  - 中文简体：`Settings → Language & Region` 添加中文，或 PowerShell: `Add-WindowsCapability -Online -Name Language.OCR~~~zh-Hans~0.0.1.0`
+
+#### Cargo.toml 新增 features
+
+```toml
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.52", features = [
+    # ... existing features ...
+    "Media_Ocr",
+    "Graphics_Imaging",
+    "Storage_Streams",
+    "Globalization",
+    "Foundation",
+    "Foundation_Collections",
+] }
+```
+
+#### 实现流程
+
+```
+PNG bytes → InMemoryRandomAccessStream → BitmapDecoder → SoftwareBitmap
+    → OcrEngine("zh-Hans") → RecognizeAsync → 逐行提取 → join("\n")
+```
+
+1. 将 PNG 字节写入 `InMemoryRandomAccessStream`
+2. `BitmapDecoder::CreateAsync()` 解码为 `SoftwareBitmap`
+3. `OcrEngine::TryCreateFromLanguage("zh-Hans")`（中文引擎天然支持 ASCII/英文/数字）
+4. `engine.RecognizeAsync(&bitmap).get()`（阻塞等待，在后台线程执行）
+5. 遍历 `result.Lines()` 提取文字
+
+#### 注意事项
+
+| 问题 | 解决 |
+|------|------|
+| 语言包未安装 | fallback 到 `TryCreateFromUserProfileLanguages()` |
+| 最大图片 2560px | 已有 `screenshot_max_size` 配置（默认 1024px） |
+| WinRT 线程初始化 | 后台线程需调用 `RoInitialize(MTA)` |
+| 文档称需要 MSIX 打包 | 实际不需要（PowerToys 证明了这一点） |
+
+#### Fallback 方案
+- Ollama API — 已实现，用户可在设置中切换
 
 ---
 

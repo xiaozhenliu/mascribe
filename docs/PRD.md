@@ -113,6 +113,79 @@ macOS 自带的语音听写功能依赖网络且准确率有限，特别是对�
 - 支持通过设置界面管理
 - 在语音识别后、文字插入前应用
 
+### 9. AI 润色（双引擎）
+
+- 对转写结果进行智能纠错和润色
+- **本地模式**: Qwen 2.5 1.5B Instruct (GGUF, Q4_K_M) via llama-cpp-2
+  - 自动检测 ChatML/Gemma 模板格式
+  - ~512 token 上下文限制
+- **在线 API 模式**: 任何 OpenAI 兼容接口 (DeepSeek, Step-Fun, Groq 等)
+  - 10s 读/5s 写超时
+  - HTTP 错误时记录响应体用于诊断
+- **Prompt 模板**: 支持 `{text}` 和 `{lang}` 占位符
+- **输出验证**: 拒绝空输出、超长输出（>3x 输入）、语言切换
+
+### 10. 屏幕 OCR 上下文
+
+截取当前屏幕内容，通过 OCR 提取可见文字，注入 AI 润色提示词中，帮助模型准确纠正同音字。
+
+#### 使用场景
+
+用户的屏幕上可能包含：
+- 代码编辑器中的中英文混合代码和注释
+- 浏览器中的网页内容（中文文章、英文文档）
+- 聊天窗口中的对话内容
+- 终端中的命令输出
+
+这些屏幕内容提供了语境，帮助 AI 润色模型区分同音字（如"把"vs"八"、"是"vs"事"）。
+
+#### 工作流程
+
+```
+截图 → OCR (原生/Ollama) → 屏幕文字（截断至 500 字符）
+                                    ↓
+语音 → SenseVoice → 纠错词典 → AI 润色 + [SCREEN CONTEXT] → 粘贴输出
+```
+
+#### OCR 引擎（跨平台原生优先）
+
+| 平台 | 原生 OCR | 技术 | 速度 |
+|------|---------|------|------|
+| macOS | VNRecognizeTextRequest | Vision 框架 (Neural Engine) | ~0.6s |
+| Windows | Windows.Media.Ocr | OcrEngine (WinRT) | ~50-200ms |
+| Fallback | Ollama GLM-OCR | HTTP API (需要 Ollama 运行) | ~5-7s |
+
+- **原生 OCR 优先**：零依赖、零配置、速度快
+- **macOS**: `VNRecognizeTextRequest`，支持 zh-Hans/zh-Hant/en-US/ja-JP/ko-KR
+- **Windows**: `Windows.Media.Ocr.OcrEngine`，需要对应语言包已安装（中文简体需 `Language.OCR~~~zh-Hans~0.0.1.0`）
+- **Ollama fallback**: 适用于自定义模型或原生 OCR 不可用的场景
+
+#### 中英文混合与代码支持
+
+OCR 引擎以 `zh-Hans`（中文简体）初始化时，**天然支持** ASCII 字母、数字和符号的识别。这意味着：
+- 代码编辑器截图中的函数名、变量名、运算符 → 正常识别
+- 中文注释 + 英文代码混合 → 正常识别
+- 网页中的中英文混排 → 正常识别
+
+不需要多次调用不同语言引擎 — 单次 `zh-Hans` OCR 即可覆盖中英混合场景。
+
+#### 约束
+
+- OCR 上下文仅在「在线 API」润色模式下注入（本地 Qwen 2.5 上下文容量不足）
+- 输出长度验证：润色结果超过输入 3 倍 + 20 字符时拒绝（防止 OCR 内容泄漏）
+- 截图需缩放至 `screenshot_max_size`（默认 1024px）以控制处理时间
+- Windows OCR 最大图片尺寸 2560px（超过需缩小）
+
+#### 配置项
+
+| 字段 | 值 | 说明 |
+|------|---|------|
+| `vision_mode` | "native" / "api" / "disabled" | OCR 模式 |
+| `screenshot_mode` | "disabled" / 其他 | 截图开关 |
+| `screenshot_max_size` | 1024 | 截图最大边长(px) |
+| `ocr_endpoint` | URL | Ollama API 地址 |
+| `ocr_model` | 模型名 | Ollama 模型 |
+
 ---
 
 ## 快捷键系统详细设计
@@ -358,14 +431,7 @@ mac-voice-input/
 
 ---
 
-## 未来规划 (v2+)
-
-### AI 后处理
-- 对识别结果进行智能纠错和润色
-- 支持两种模式：
-  - API 模式：调用远程 LLM API（OpenAI/Claude 等兼容接口）
-  - 本地模式：通过 Ollama 等调用本地模型
-- 可在设置中选择模式和配置参数
+## 未来规划
 
 ### 实时流式识别
 - 边说边显示文字（SenseVoice 目前为离线模式，需评估流式支持）
@@ -373,10 +439,6 @@ mac-voice-input/
 ### 多模型支持
 - 允许用户选择不同的语音模型
 - 支持 Whisper 等替代模型
-
-### 自动标点优化
-- 智能插入标点符号
-- 基于上下文的断句优化
 
 ---
 
