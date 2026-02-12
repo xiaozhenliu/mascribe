@@ -10,7 +10,6 @@ mod recognition;
 mod screenshot;
 mod state;
 mod tray;
-mod vision;
 
 use audio::capture::AudioBuffer;
 use config::AppConfig;
@@ -188,21 +187,32 @@ pub fn run() {
                 // creating an ugly, irregular "ghost frame" artifact.
                 let _ = window.set_shadow(false);
 
-                // Pre-calculate position for when we show it later
-                if let Some(monitor) = window.current_monitor().ok().flatten() {
+                // Pre-calculate position: bottom-center, ~80px above screen bottom
+                // Use primary_monitor() instead of current_monitor() because
+                // the window is hidden and may not be associated with any monitor yet.
+                let monitor = window.primary_monitor().ok().flatten()
+                    .or_else(|| window.current_monitor().ok().flatten())
+                    .or_else(|| window.available_monitors().ok()
+                        .and_then(|m| m.into_iter().next()));
+                if let Some(monitor) = monitor {
                     let screen = monitor.size();
                     let scale = monitor.scale_factor();
+                    let mon_pos = monitor.position();
                     let win_w = 260.0;
                     let win_h = 100.0;
-                    // monitor.position() gives the top-left of the visible area;
-                    // screen.height includes the Dock, so we offset by ~80px
-                    // to place the pill just above the Dock.
-                    let x = (screen.width as f64 / scale - win_w) / 2.0;
-                    let y = screen.height as f64 / scale - win_h - 80.0;
+                    // Center horizontally on the monitor, 80px above bottom
+                    let x = mon_pos.x as f64 + (screen.width as f64 - win_w * scale) / 2.0;
+                    let y = mon_pos.y as f64 + screen.height as f64 - (win_h + 80.0) * scale;
                     let _ = window.set_position(tauri::PhysicalPosition::new(
-                        (x * scale) as i32,
-                        (y * scale) as i32,
+                        x as i32,
+                        y as i32,
                     ));
+                    println!("[window] positioned at ({}, {}), monitor {}x{} @ ({},{}), scale={}",
+                        x as i32, y as i32,
+                        screen.width, screen.height,
+                        mon_pos.x, mon_pos.y, scale);
+                } else {
+                    println!("[window] WARNING: no monitor detected, using default position");
                 }
             }
             Ok(())

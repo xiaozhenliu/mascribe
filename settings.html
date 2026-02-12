@@ -95,18 +95,18 @@
         <textarea id="polish-prompt" rows="8"></textarea>
       </section>
 
-      <!-- Vision Model -->
+      <!-- Screen OCR -->
       <section class="field">
-        <label>Vision Model / 视觉模型</label>
-        <p class="hint">Use local vision model (MiniCPM-V/Qwen2-VL) to understand screenshots</p>
+        <label>Screen OCR / 屏幕文字识别</label>
+        <p class="hint">OCR extracts text from screenshots, then AI polishing uses it as context to correct homophones</p>
         <div class="radio-group">
           <label class="radio-label">
             <input type="radio" name="vision-mode" value="disabled" checked />
             <span>Disabled / 关闭</span>
           </label>
           <label class="radio-label">
-            <input type="radio" name="vision-mode" value="local" />
-            <span>Local Model / 本地模型 ⭐</span>
+            <input type="radio" name="vision-mode" value="api" />
+            <span>Enabled / 开启 ⭐</span>
           </label>
         </div>
         <p id="vision-hint" class="hint" style="margin-top: 8px; color: #666;">
@@ -114,13 +114,17 @@
         </p>
       </section>
 
-      <!-- Vision Model Path (shown when vision mode is enabled) -->
-      <section id="vision-model-section" class="field hidden">
-        <label for="vision-model-path">Vision Model Path / 视觉模型路径</label>
-        <p class="hint">Path to MiniCPM-V or Qwen2-VL model directory</p>
-        <div class="path-row">
-          <input type="text" id="vision-model-path" class="path-input" placeholder="~/.openclaw/models/minicpm-v-2_6/" />
-          <button id="browse-vision-btn" class="btn-small">Browse...</button>
+      <!-- OCR API settings (shown when OCR is enabled) -->
+      <section id="ocr-settings" class="field hidden">
+        <label>OCR Settings / OCR 设置</label>
+        <p class="hint">Ollama + GLM-OCR recommended. Install: <code>ollama pull glm-ocr</code></p>
+        <div class="api-field">
+          <span class="api-label">Endpoint</span>
+          <input type="text" id="ocr-endpoint" placeholder="http://localhost:11434/v1" />
+        </div>
+        <div class="api-field">
+          <span class="api-label">Model</span>
+          <input type="text" id="ocr-model" placeholder="glm-ocr" />
         </div>
       </section>
 

@@ -6,7 +6,6 @@ use crate::hotkey;
 use crate::polishing::online::OnlinePolisher;
 use crate::screenshot;
 use crate::state::AppState;
-use crate::vision::{self, VisionConfig};
 
 #[tauri::command]
 pub fn show_window(app: AppHandle) -> Result<(), String> {
@@ -156,17 +155,17 @@ pub fn stop_recording_and_transcribe(
         return Err("Recording too short".to_string());
     }
 
-    // Read config for recordings dir, polish settings, API config, screenshot settings, and vision settings
+    // Read config for recordings dir, polish settings, API config, screenshot settings, and vision/OCR settings
     let (recordings_dir, polish_prompt, polish_enabled, polish_mode,
          api_endpoint, api_key, api_model, screenshot_mode, screenshot_max_size,
-         vision_mode, vision_model_path, vision_max_image_size) = {
+         vision_mode, ocr_endpoint, ocr_model) = {
         let cfg = state.config.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
         (cfg.recordings_dir.clone(), cfg.polish_prompt.clone(), cfg.polish_enabled,
          cfg.polish_mode.clone(), cfg.api_endpoint.clone(),
          cfg.api_key.clone(), cfg.api_model.clone(),
          cfg.screenshot_mode.clone(), cfg.screenshot_max_size,
-         cfg.vision_mode.clone(), cfg.vision_model_path.clone(),
-         cfg.vision_max_image_size)
+         cfg.vision_mode.clone(), cfg.ocr_endpoint.clone(),
+         cfg.ocr_model.clone())
     };
 
     // 3. Capture screenshot if enabled (before transcription for minimal delay)
@@ -247,72 +246,54 @@ pub fn stop_recording_and_transcribe(
         dict.apply(&text)
     };
 
-    // 8. AI polishing / Vision processing — dispatch based on config
-    let polished = if !polish_enabled && vision_mode != "local" {
-        println!("[polish] disabled in config and vision not enabled, skipping");
-        corrected.clone()
-    } else {
-        // Check if we should use vision model
-        let use_vision = vision_mode == "local" && screenshot_result.is_some();
+    // 8a. OCR: extract screen context from screenshot (if vision/OCR enabled)
+    let screen_context: Option<String> = if vision_mode != "disabled" && screenshot_result.is_some() {
+        let screenshot_base64 = screenshot::encode_base64(screenshot_result.as_ref().unwrap());
+        println!("[ocr] running OCR via {} model={}", ocr_endpoint, ocr_model);
+        let start = std::time::Instant::now();
 
-        if use_vision {
-            // Try to use vision model
-            println!("[vision] attempting to process with vision model");
-            let vision_config = VisionConfig {
-                model_path: vision_model_path.clone(),
-                max_image_size: vision_max_image_size,
-                num_threads: 4,
-            };
-
-            match vision::load_vision_engine(vision_config) {
-                Ok(engine) => {
-                    if engine.is_ready() {
-                        let prompt = vision::build_vision_prompt(&corrected, &detected_lang);
-                        let start = std::time::Instant::now();
-
-                        // Preprocess image if needed
-                        let processed_image = if vision_max_image_size > 0 {
-                            match vision::preprocess_image(screenshot_result.as_ref().unwrap(), vision_max_image_size) {
-                                Ok(img) => img,
-                                Err(e) => {
-                                    println!("[vision] preprocess failed: {}, using original", e);
-                                    screenshot_result.as_ref().unwrap().clone()
-                                }
-                            }
-                        } else {
-                            screenshot_result.as_ref().unwrap().clone()
-                        };
-
-                        match engine.process(&processed_image, &prompt) {
-                            Ok(result) => {
-                                println!("[vision] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
-                                result
-                            }
-                            Err(e) => {
-                                println!("[vision] ERROR: {}, falling back to text polish", e);
-                                // Fall back to text-only polishing
-                                polish_text_only(&corrected, &detected_lang, polish_enabled, &polish_mode,
-                                    &polish_prompt, &api_endpoint, &api_key, &api_model, &state)
-                            }
-                        }
-                    } else {
-                        println!("[vision] engine not ready, falling back to text polish");
-                        polish_text_only(&corrected, &detected_lang, polish_enabled, &polish_mode,
-                            &polish_prompt, &api_endpoint, &api_key, &api_model, &state)
-                    }
-                }
-                Err(e) => {
-                    println!("[vision] failed to load engine: {}, falling back to text polish", e);
-                    polish_text_only(&corrected, &detected_lang, polish_enabled, &polish_mode,
-                        &polish_prompt, &api_endpoint, &api_key, &api_model, &state)
-                }
+        match ocr_screenshot(&ocr_endpoint, &ocr_model, &screenshot_base64) {
+            Ok(text) => {
+                println!("[ocr] extracted {} chars ({:.1}s): '{}'",
+                    text.len(), start.elapsed().as_secs_f64(),
+                    text.chars().take(100).collect::<String>());
+                Some(text)
             }
-        } else {
-            // Use text-only polishing
-            polish_text_only(&corrected, &detected_lang, polish_enabled, &polish_mode,
-                &polish_prompt, &api_endpoint, &api_key, &api_model, &state)
+            Err(e) => {
+                println!("[ocr] ERROR: {}, continuing without screen context", e);
+                None
+            }
         }
+    } else {
+        None
     };
+
+    // 8b. AI polishing — inject screen context only for online API mode
+    //     Local model (Qwen 2.5 1.5B) has very limited context (~512 tokens),
+    //     so OCR text would exceed batch size and crash llama.cpp.
+    let effective_prompt = if let Some(ref ctx) = screen_context {
+        if polish_mode == "api" {
+            // Truncate OCR to ~500 chars to keep total prompt reasonable
+            let truncated: String = ctx.chars().take(500).collect();
+            let base = if polish_prompt.is_empty() {
+                crate::config::DEFAULT_POLISH_PROMPT.to_string()
+            } else {
+                polish_prompt.clone()
+            };
+            format!("{}\n\n--- 当前屏幕内容 (OCR) ---\n{}\n--- 屏幕内容结束 ---",
+                base, truncated)
+        } else {
+            println!("[ocr] screen context available but polish_mode='{}', skipping injection (local model too small)", polish_mode);
+            polish_prompt.clone()
+        }
+    } else {
+        polish_prompt.clone()
+    };
+
+    let polished = polish_text_only(
+        &corrected, &detected_lang, polish_enabled, &polish_mode,
+        &effective_prompt, &api_endpoint, &api_key, &api_model, &state,
+    );
 
     // 9. Insert text into active app
     crate::insertion::insert_text(&polished).map_err(|e: anyhow::Error| e.to_string())?;
@@ -385,6 +366,66 @@ pub fn unregister_native_hotkey(state: State<'_, AppState>) -> Result<(), String
         *handle = None; // Drop stops the CGEventTap
     }
     Ok(())
+}
+
+/// Call OCR model (e.g., GLM-OCR via Ollama) to extract text from screenshot.
+/// This is step 1 of the two-step pipeline: OCR → Polish.
+fn ocr_screenshot(
+    endpoint: &str,
+    model: &str,
+    screenshot_base64: &str,
+) -> anyhow::Result<String> {
+    let agent = ureq::AgentBuilder::new()
+        .timeout_read(std::time::Duration::from_secs(30))
+        .timeout_write(std::time::Duration::from_secs(5))
+        .build();
+
+    let url = if endpoint.ends_with("/chat/completions") {
+        endpoint.to_string()
+    } else {
+        format!("{}/chat/completions", endpoint.trim_end_matches('/'))
+    };
+
+    let response = agent
+        .post(&url)
+        .set("Content-Type", "application/json")
+        .send_json(ureq::json!({
+            "model": model,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "提取这张截图中所有可见的文字内容。只输出提取到的文字，不要解释。"
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": format!("data:image/png;base64,{}", screenshot_base64)
+                        }
+                    }
+                ]
+            }],
+            "temperature": 0.1,
+            "max_tokens": 2048
+        }))
+        .map_err(|e| anyhow::anyhow!("OCR request failed: {}", e))?;
+
+    let body: serde_json::Value = response
+        .into_json()
+        .map_err(|e| anyhow::anyhow!("Failed to parse OCR response: {}", e))?;
+
+    let text = body["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+
+    if text.is_empty() {
+        anyhow::bail!("OCR returned empty text");
+    }
+
+    Ok(text)
 }
 
 /// Helper function for text-only polishing (used as fallback when vision fails)

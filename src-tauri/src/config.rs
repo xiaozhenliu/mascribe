@@ -50,6 +50,10 @@ pub struct AppConfig {
     pub vision_mode: String,
     /// Max image dimension for vision model (0 = no limit)
     pub vision_max_image_size: u32,
+    /// OCR API endpoint (e.g., Ollama at http://localhost:11434/v1)
+    pub ocr_endpoint: String,
+    /// OCR model name (e.g., "glm-ocr")
+    pub ocr_model: String,
 }
 
 impl Default for AppConfig {
@@ -91,6 +95,8 @@ impl Default for AppConfig {
                 .to_string(),
             vision_mode: "disabled".to_string(),
             vision_max_image_size: 448,
+            ocr_endpoint: "http://localhost:11434/v1".to_string(),
+            ocr_model: "glm-ocr".to_string(),
         }
     }
 }

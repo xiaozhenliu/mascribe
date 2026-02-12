@@ -222,7 +222,7 @@ mod macos {
             let tap_result = CGEventTap::new(
                 CGEventTapLocation::Session,
                 CGEventTapPlacement::HeadInsertEventTap,
-                CGEventTapOptions::ListenOnly,
+                CGEventTapOptions::Default,
                 vec![CGEventType::KeyDown],
                 move |_proxy, _etype, event| {
                     let kc = event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u16;
@@ -234,6 +234,9 @@ mod macos {
                         && (flags & target_flags) == target_flags
                     {
                         on_press();
+                        // Swallow the event so it doesn't reach the active app
+                        // (e.g., prevent ContextMenu key from opening right-click menu)
+                        return None;
                     }
                     Some(event.clone())
                 },

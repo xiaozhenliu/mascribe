@@ -22,6 +22,8 @@ interface AppConfig {
   vision_model_path: string;
   vision_mode: string;
   vision_max_image_size: number;
+  ocr_endpoint: string;
+  ocr_model: string;
 }
 
 // ── DOM refs ──
@@ -38,9 +40,9 @@ const apiSettings = () => document.getElementById("api-settings") as HTMLElement
 const polishPromptSection = () => document.getElementById("polish-prompt-section") as HTMLElement;
 const screenshotHint = () => document.getElementById("screenshot-hint") as HTMLElement;
 const visionHint = () => document.getElementById("vision-hint") as HTMLElement;
-const visionModelSection = () => document.getElementById("vision-model-section") as HTMLElement;
-const visionModelPath = () => document.getElementById("vision-model-path") as HTMLInputElement;
-const browseVisionBtn = () => document.getElementById("browse-vision-btn") as HTMLButtonElement;
+const ocrSettings = () => document.getElementById("ocr-settings") as HTMLElement;
+const ocrEndpoint = () => document.getElementById("ocr-endpoint") as HTMLInputElement;
+const ocrModel = () => document.getElementById("ocr-model") as HTMLInputElement;
 const btnSave = () => document.getElementById("btn-save") as HTMLButtonElement;
 let originalConfig: AppConfig | null = null;
 
@@ -245,7 +247,7 @@ function setScreenshotMode(mode: string) {
 /** Update screenshot hint based on selected mode and polish mode */
 function updateScreenshotHint() {
   const screenshotMode = getScreenshotMode();
-  const { enabled: polishEnabled, mode: polishMode } = getPolishMode();
+  const { enabled: polishEnabled } = getPolishMode();
   const visionMode = getVisionMode();
   const hint = screenshotHint();
 
@@ -254,14 +256,12 @@ function updateScreenshotHint() {
   } else if (screenshotMode === "save") {
     hint.textContent = "Screenshots will be saved to ~/Library/Application Support/com.mac-voice-input/screenshots/";
   } else if (screenshotMode === "api") {
-    if (visionMode === "local") {
-      hint.textContent = "✓ Screenshots will be processed by the local vision model.";
+    if (visionMode !== "disabled") {
+      hint.textContent = "✓ Screenshot → OCR → screen context injected into AI polishing prompt for homophone correction.";
     } else if (!polishEnabled) {
-      hint.textContent = "⚠️ AI Polishing is disabled. Screenshots will be saved but not sent to API.";
-    } else if (polishMode === "local") {
-      hint.textContent = "⚠️ Local text model doesn't support images. Enable Vision Model or use Online API mode.";
+      hint.textContent = "⚠️ AI Polishing is disabled. Enable polishing + OCR to use screenshots for correction.";
     } else {
-      hint.textContent = "✓ Screenshots will be sent to the vision-capable API along with transcribed text.";
+      hint.textContent = "⚠️ Enable Screen OCR above to use screenshots for context-aware correction.";
     }
   }
 }
@@ -295,18 +295,19 @@ function setVisionMode(mode: string) {
   updateVisionVisibility();
 }
 
-/** Update vision UI visibility and hint */
+/** Update vision/OCR UI visibility and hint */
 function updateVisionVisibility() {
   const mode = getVisionMode();
-  const section = visionModelSection();
+  const ocr = ocrSettings();
   const hint = visionHint();
 
   if (mode === "disabled") {
-    section.classList.add("hidden");
+    ocr.classList.add("hidden");
     hint.textContent = "";
   } else {
-    section.classList.remove("hidden");
-    hint.textContent = "⚠️ Vision model support is experimental. Requires MiniCPM-V or Qwen2-VL model files.";
+    // OCR enabled
+    ocr.classList.remove("hidden");
+    hint.textContent = "✓ Screenshot → OCR extract text → AI polishing uses screen text as context for homophone correction.";
   }
 }
 
@@ -320,23 +321,6 @@ function setupVisionRadios() {
   }
 }
 
-/** Setup vision model path browser */
-async function setupVisionBrowse() {
-  browseVisionBtn().addEventListener("click", async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        defaultPath: visionModelPath().value || undefined,
-      });
-      if (selected && typeof selected === "string") {
-        visionModelPath().value = selected;
-      }
-    } catch (e) {
-      console.error("browse error:", e);
-    }
-  });
-}
 
 // ── Correction Dictionary ──
 
@@ -461,9 +445,10 @@ async function loadConfig() {
     // Screenshot mode
     setScreenshotMode(config.screenshot_mode || "disabled");
 
-    // Vision mode
+    // Vision/OCR mode
     setVisionMode(config.vision_mode || "disabled");
-    visionModelPath().value = config.vision_model_path || "";
+    ocrEndpoint().value = config.ocr_endpoint || "http://localhost:11434/v1";
+    ocrModel().value = config.ocr_model || "glm-ocr";
   } catch (e) {
     console.error("Failed to load config:", e);
     showToast("Failed to load settings", "error");
@@ -490,8 +475,10 @@ async function saveConfig() {
     screenshot_mode: screenshotMode,
     screenshot_max_size: originalConfig.screenshot_max_size || 1024,
     vision_mode: visionMode,
-    vision_model_path: visionModelPath().value.trim(),
+    vision_model_path: originalConfig.vision_model_path || "",
     vision_max_image_size: originalConfig.vision_max_image_size || 448,
+    ocr_endpoint: ocrEndpoint().value.trim() || "http://localhost:11434/v1",
+    ocr_model: ocrModel().value.trim() || "glm-ocr",
   };
 
   try {
@@ -520,7 +507,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupShortcutRecorder();
   setupCorrections();
   await setupBrowse();
-  await setupVisionBrowse();
 
   btnSave().addEventListener("click", saveConfig);
 });

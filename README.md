@@ -14,6 +14,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 - **Fast** — ~50ms to transcribe 5 seconds of audio on Apple Silicon
 - **Private** — Everything runs locally, no network required
 - **AI polishing (dual-engine)** — Local Qwen 2.5 model or any OpenAI-compatible API for punctuation, grammar, and homophone correction
+- **Screen OCR context** — Captures screenshot, runs OCR (GLM-OCR via Ollama), and injects screen text into the polishing prompt for accurate homophone correction
 - **Mixed-language friendly** — Preserves Chinese-English code-switching as spoken
 - **Universal paste** — Works in any macOS app (Chrome, VS Code, WeChat, etc.)
 - **Configurable hotkey** — Set any key or combo; supports special keys like ContextMenu via presets
@@ -27,6 +28,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 - **快速** — Apple Silicon 上 5 秒音频仅需约 50ms 转写
 - **隐私** — 完全本地运行，无需网络
 - **AI 润色（双引擎）** — 本地 Qwen 2.5 模型或在线 OpenAI 兼容 API，自动修正标点、语法和同音字
+- **屏幕 OCR 上下文** — 截取当前窗口，通过 GLM-OCR (Ollama) 提取屏幕文字，注入润色提示词中，精准纠正同音字
 - **中英混合友好** — 保留说话时的中英混杂，不自动翻译
 - **通用粘贴** — 适用于任何 macOS 应用
 - **自定义快捷键** — 支持任意单键或组合键，特殊键（如 ContextMenu）可通过预设选择
@@ -89,6 +91,46 @@ Expected path: `~/.openclaw/models/qwen2.5-1.5b/qwen2.5-1.5b-instruct-q4_k_m.ggu
 
 > **Tip / 提示:** If you prefer not to download the local model, you can use the **Online API** mode instead — configure any OpenAI-compatible endpoint (Step-Fun, DeepSeek, Groq, etc.) in Settings.
 
+#### 3. GLM-OCR via Ollama (Optional / 可选 — for screen context OCR)
+
+OCR model for extracting text from screenshots to help AI polishing correct homophones based on screen context. Requires [Ollama](https://ollama.com/).
+
+截图文字识别模型，提取屏幕文字作为上下文，帮助 AI 润色精准纠正同音字。需要安装 [Ollama](https://ollama.com/)。
+
+```bash
+# 1. Install Ollama / 安装 Ollama
+# Download from https://ollama.com/ or:
+brew install ollama
+
+# 2. Start Ollama service / 启动 Ollama 服务
+ollama serve
+
+# 3. Download GLM-OCR model (~2.2 GB) / 下载 GLM-OCR 模型
+ollama pull glm-ocr
+```
+
+**How it works / 工作原理:**
+
+```
+Screenshot → GLM-OCR (OCR, extract text) → screen context
+                                                ↓
+Voice → SenseVoice → corrections → AI polish prompt + screen context → corrected text
+```
+
+The OCR extracts visible text from your current window. That text is injected into the AI polishing prompt as context, allowing the polishing model to correctly disambiguate homophones (e.g., knowing "handle" is on screen helps pick "把" vs "八").
+
+OCR 从当前窗口提取可见文字，注入 AI 润色提示词中作为上下文，帮助润色模型准确区分同音字（例如，看到屏幕上有 "handle" 就能正确选择 "把" 而不是 "八"）。
+
+**Settings / 设置:**
+
+| Setting | Value |
+|---------|-------|
+| Screenshot Context | **Send to API** |
+| Screen OCR | **Enabled** |
+| OCR Endpoint | `http://localhost:11434/v1` (default) |
+| OCR Model | `glm-ocr` (default) |
+| AI Polishing | **Online API** (recommended) with endpoint/key/model configured |
+
 ## Quick Start / 快速开始
 
 ### Download / 下载
@@ -134,6 +176,7 @@ The built app will be in `src-tauri/target/release/bundle/macos/`.
 | Speech Model | SenseVoice via sherpa-rs |
 | AI Polishing (local) | Qwen 2.5 1.5B Instruct via llama-cpp-2 |
 | AI Polishing (online) | OpenAI-compatible API via ureq |
+| Screen OCR | GLM-OCR via Ollama (OpenAI-compatible API) |
 | Audio | cpal (CoreAudio) |
 | Hotkey | CGEventTap (native) + tauri-plugin-global-shortcut |
 | Text Insertion | Clipboard + CGEvent Cmd+V |
@@ -181,6 +224,7 @@ src/                     Web frontend
 | Microphone | Record audio / 录制音频 |
 | Accessibility | Simulate Cmd+V paste / 模拟粘贴按键 |
 | Input Monitoring | System-level hotkey capture via CGEventTap / 全局快捷键捕获 |
+| Screen Recording | Capture screenshots for OCR context (optional) / 截图用于 OCR 上下文（可选） |
 
 ## License
 
