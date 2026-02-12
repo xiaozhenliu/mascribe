@@ -1,3 +1,5 @@
+//! macOS text insertion via CGEvent (Cmd+V simulation).
+
 use arboard::Clipboard;
 use core_graphics::event::{CGEvent, CGEventFlags, CGKeyCode};
 use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};

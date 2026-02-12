@@ -17,6 +17,8 @@ interface AppConfig {
   api_endpoint: string;
   api_key: string;
   api_model: string;
+  screenshot_mode: string;
+  screenshot_max_size: number;
 }
 
 // ── DOM refs ──
@@ -31,6 +33,7 @@ const apiKey = () => document.getElementById("api-key") as HTMLInputElement;
 const apiModel = () => document.getElementById("api-model") as HTMLInputElement;
 const apiSettings = () => document.getElementById("api-settings") as HTMLElement;
 const polishPromptSection = () => document.getElementById("polish-prompt-section") as HTMLElement;
+const screenshotHint = () => document.getElementById("screenshot-hint") as HTMLElement;
 const btnSave = () => document.getElementById("btn-save") as HTMLButtonElement;
 let originalConfig: AppConfig | null = null;
 
@@ -203,7 +206,60 @@ function updatePolishVisibility() {
 function setupPolishRadios() {
   const radios = document.querySelectorAll<HTMLInputElement>('input[name="polish-mode"]');
   for (const r of radios) {
-    r.addEventListener("change", updatePolishVisibility);
+    r.addEventListener("change", () => {
+      updatePolishVisibility();
+      updateScreenshotHint();
+    });
+  }
+}
+
+// ── Screenshot mode ──
+
+/** Get current screenshot mode from radio buttons */
+function getScreenshotMode(): string {
+  const radios = document.querySelectorAll<HTMLInputElement>('input[name="screenshot-mode"]');
+  for (const r of radios) {
+    if (r.checked) {
+      return r.value;
+    }
+  }
+  return "disabled";
+}
+
+/** Set screenshot mode radio */
+function setScreenshotMode(mode: string) {
+  const radios = document.querySelectorAll<HTMLInputElement>('input[name="screenshot-mode"]');
+  for (const r of radios) {
+    r.checked = r.value === mode;
+  }
+  updateScreenshotHint();
+}
+
+/** Update screenshot hint based on selected mode and polish mode */
+function updateScreenshotHint() {
+  const screenshotMode = getScreenshotMode();
+  const { enabled: polishEnabled, mode: polishMode } = getPolishMode();
+  const hint = screenshotHint();
+
+  if (screenshotMode === "disabled") {
+    hint.textContent = "";
+  } else if (screenshotMode === "save") {
+    hint.textContent = "Screenshots will be saved to ~/Library/Application Support/com.mac-voice-input/screenshots/";
+  } else if (screenshotMode === "api") {
+    if (!polishEnabled) {
+      hint.textContent = "⚠️ AI Polishing is disabled. Screenshots will be saved but not sent to API.";
+    } else if (polishMode === "local") {
+      hint.textContent = "⚠️ Local model doesn't support images. Screenshots will be saved but not sent. Use Online API mode for vision support.";
+    } else {
+      hint.textContent = "✓ Screenshots will be sent to the vision-capable API along with transcribed text.";
+    }
+  }
+}
+
+function setupScreenshotRadios() {
+  const radios = document.querySelectorAll<HTMLInputElement>('input[name="screenshot-mode"]');
+  for (const r of radios) {
+    r.addEventListener("change", updateScreenshotHint);
   }
 }
 
@@ -326,6 +382,9 @@ async function loadConfig() {
     apiEndpoint().value = config.api_endpoint || "";
     apiKey().value = config.api_key || "";
     apiModel().value = config.api_model || "";
+
+    // Screenshot mode
+    setScreenshotMode(config.screenshot_mode || "disabled");
   } catch (e) {
     console.error("Failed to load config:", e);
     showToast("Failed to load settings", "error");
@@ -336,6 +395,7 @@ async function saveConfig() {
   if (!originalConfig) return;
 
   const { enabled, mode } = getPolishMode();
+  const screenshotMode = getScreenshotMode();
 
   const updated: AppConfig = {
     ...originalConfig,
@@ -347,6 +407,8 @@ async function saveConfig() {
     api_endpoint: apiEndpoint().value.trim(),
     api_key: apiKey().value.trim(),
     api_model: apiModel().value.trim(),
+    screenshot_mode: screenshotMode,
+    screenshot_max_size: originalConfig.screenshot_max_size || 1024,
   };
 
   try {
@@ -368,6 +430,7 @@ async function saveConfig() {
 
 window.addEventListener("DOMContentLoaded", async () => {
   setupPolishRadios();
+  setupScreenshotRadios();
   await loadConfig();
   await loadCorrections();
   setupShortcutRecorder();

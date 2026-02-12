@@ -1,0 +1,381 @@
+# Windows 平台迁移实现文档
+
+## 概述
+
+本文档记录了将 macOS 语音输入工具迁移到 Windows 平台的实际实现细节。
+
+---
+
+## 1. 项目结构变更
+
+### 1.1 热键模块 (hotkey)
+
+**重构前:**
+```
+src/hotkey/
+  └── mod.rs          (包含所有热键逻辑，macOS专用)
+```
+
+**重构后:**
+```
+src/hotkey/
+  ├── mod.rs          (跨平台接口)
+  ├── keycode.rs      (平台无关的键码定义)
+  ├── macos.rs        (macOS CGEventTap 实现)
+  └── windows.rs      (Windows SetWindowsHookEx 实现)
+```
+
+#### 关键设计决策
+
+1. **键码抽象层**: 创建了 `Key` 和 `Modifier` 枚举来统一表示按键
+   - `Key::FKey(u8)` - 功能键 F1-F24（注意：原本想用 `F(u8)` 但与字母 F 冲突）
+   - `Modifier::{Ctrl, Shift, Alt, Meta}` - 修饰键
+   - 支持解析 "Ctrl+Shift+S" 这样的热键字符串
+
+2. **平台适配**:
+   - macOS: 使用 CGEventTap 监听全局键盘事件
+   - Windows: 使用 SetWindowsHookEx + WH_KEYBOARD_LL 低级别键盘钩子
+
+3. **热键匹配逻辑**:
+   - macOS: 检查 keycode 和 flags (CGEventFlags)
+   - Windows: 检查 VK code 和 GetAsyncKeyState 获取的修饰键状态
+
+---
+
+### 1.2 文本插入模块 (insertion)
+
+**重构前:**
+```
+src/insertion/
+  ├── mod.rs
+  └── clipboard.rs    (macOS专用)
+```
+
+**重构后:**
+```
+src/insertion/
+  ├── mod.rs          (跨平台接口)
+  ├── macos.rs        (CGEvent Cmd+V 模拟)
+  └── windows.rs      (SendInput Ctrl+V 模拟)
+```
+
+#### 实现细节
+
+**macOS 实现:**
+- 使用 `CGEvent` 创建键盘事件
+- 设置 `CGEventFlags::CGEventFlagCommand` 标志位
+- 需要 Accessibility 权限
+- 备选方案：AppleScript 调用 System Events
+
+**Windows 实现:**
+- 使用 `SendInput` API 发送键盘输入
+- 构造 `INPUT` 结构体数组：[Ctrl按下, V按下, V释放, Ctrl释放]
+- 不需要特殊权限
+
+---
+
+### 1.3 截图模块 (screenshot)
+
+**重构前:**
+```
+src/screenshot/
+  └── mod.rs          (macOS CGWindow 实现)
+```
+
+**重构后:**
+```
+src/screenshot/
+  ├── mod.rs          (跨平台接口 + 共享工具函数)
+  ├── macos.rs        (CGWindow API)
+  └── windows.rs      (GDI BitBlt)
+```
+
+#### 实现细节
+
+**macOS 实现:**
+- 使用 `CGDisplay::screenshot()` 捕获主显示器
+- 将 `CGImage` 转换为 PNG 字节
+
+**Windows 实现:**
+- 使用 GDI API:
+  1. `GetDesktopWindow()` 获取桌面窗口
+  2. `GetDC()` 获取设备上下文
+  3. `CreateCompatibleDC()` 和 `CreateCompatibleBitmap()` 创建兼容位图
+  4. `BitBlt()` 复制屏幕内容
+  5. `GetDIBits()` 获取像素数据
+- 将 BGRA 格式转换为 RGBA
+- 编码为 PNG
+
+---
+
+### 1.4 权限模块 (permissions)
+
+**变更:** 添加 Windows 存根实现
+
+**macOS:**
+- `request_microphone_permission()` - 调用 AVCaptureDevice.requestAccess
+- `request_accessibility_permission()` - 调用 AXIsProcessTrustedWithOptions
+- `check_screen_recording_permission()` - 调用 CGPreflightScreenCaptureAccess
+
+**Windows:**
+- 所有权限函数返回 `true`
+- 麦克风：Windows 在首次使用时自动提示
+- 辅助功能/截图：Windows 没有类似的权限系统
+
+---
+
+### 1.5 主库 (lib.rs)
+
+**变更:**
+
+1. **日志设置平台化**:
+   ```rust
+   #[cfg(target_os = "macos")]
+   fn setup_file_logging() { /* 使用 dup2 重定向 stdout/stderr */ }
+
+   #[cfg(target_os = "windows")]
+   fn setup_file_logging() { /* Windows 不支持 dup2，简化处理 */ }
+   ```
+
+2. **权限请求平台化**:
+   ```rust
+   #[cfg(target_os = "macos")]
+   { /* 请求麦克风和辅助功能权限 */ }
+
+   #[cfg(target_os = "windows")]
+   { /* Windows 权限自动处理 */ }
+   ```
+
+---
+
+## 2. Cargo.toml 变更
+
+### 2.1 添加的依赖
+
+```toml
+# 全局依赖
+once_cell = "1.19"  # 用于 Windows 热键的静态变量
+
+# Windows 专用依赖
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.52", features = [
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Threading",
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Dxgi",
+    "Win32_System_WinRT",
+    "Win32_System_Com",
+    "Graphics",
+    "Graphics_Capture",
+    "Graphics_DirectX",
+    "Graphics_DirectX_Direct3D11",
+] }
+```
+
+---
+
+## 3. 编译验证
+
+### 3.1 macOS 构建
+
+```bash
+cargo build --lib
+```
+
+**结果:** ✅ 成功
+
+### 3.2 Windows 构建
+
+需要在 Windows 环境或使用交叉编译工具链。
+
+```bash
+# Windows 目标
+cargo build --target x86_64-pc-windows-msvc
+```
+
+---
+
+## 4. 关键代码片段
+
+### 4.1 热键解析
+
+```rust
+// 解析 "Ctrl+Shift+S" 为 HotkeyDefinition
+pub fn parse_hotkey(hotkey: &str) -> Result<HotkeyDefinition, String> {
+    let parts: Vec<&str> = hotkey.split('+').map(|s| s.trim()).collect();
+
+    for part in &parts {
+        match part.to_lowercase().as_str() {
+            "ctrl" | "control" => modifiers.push(Modifier::Ctrl),
+            "shift" => modifiers.push(Modifier::Shift),
+            "alt" | "option" | "opt" => modifiers.push(Modifier::Alt),
+            "meta" | "command" | "cmd" | "win" | "windows" => {
+                modifiers.push(Modifier::Meta)
+            }
+            _ => { /* 解析为 Key */ }
+        }
+    }
+
+    Ok(HotkeyDefinition { modifiers, key })
+}
+```
+
+### 4.2 Windows 热键钩子
+
+```rust
+extern "system" fn keyboard_hook_proc(
+    n_code: i32,
+    w_param: WPARAM,
+    l_param: LPARAM
+) -> LRESULT {
+    if n_code >= 0 && w_param.0 as u32 == WM_KEYDOWN {
+        let kbd_struct = unsafe {
+            &*(l_param.0 as *const KBDLLHOOKSTRUCT)
+        };
+        let vk = VIRTUAL_KEY(kbd_struct.vkCode as u16);
+
+        // 检查是否匹配目标热键
+        if let Ok(target) = TARGET_HOTKEY.lock() {
+            if let Some((target_vk, target_mods)) = *target {
+                if vk == target_vk {
+                    let current_mods = get_modifier_state();
+                    if (current_mods & target_mods) == target_mods {
+                        // 热键匹配，执行回调
+                        if let Ok(callback) = CALLBACK.lock() {
+                            if let Some(ref cb) = *callback {
+                                cb();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    unsafe { CallNextHookEx(None, n_code, w_param, l_param) }
+}
+```
+
+### 4.3 Windows 文本插入
+
+```rust
+pub fn insert_text(text: &str) -> anyhow::Result<()> {
+    let mut clipboard = Clipboard::new()?;
+    clipboard.set_text(text)?;
+
+    thread::sleep(Duration::from_millis(50));
+
+    // 构造 Ctrl+V 按键序列
+    let inputs = [
+        INPUT { /* Ctrl down */ },
+        INPUT { /* V down */ },
+        INPUT { /* V up */ },
+        INPUT { /* Ctrl up */ },
+    ];
+
+    unsafe {
+        SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
+    }
+
+    Ok(())
+}
+```
+
+---
+
+## 5. 已知问题和注意事项
+
+### 5.1 键码冲突
+
+**问题:** `Key` 枚举中字母 `F` 和功能键 `F(u8)` 命名冲突。
+
+**解决:** 将功能键重命名为 `FKey(u8)`。
+
+### 5.2 小键盘键
+
+**问题:** macOS 实现中引用了 `Key::NumpadClear` 等不存在于 `Key` 枚举的键。
+
+**解决:** 添加了完整的数字小键盘键支持：
+- `Numpad0` - `Numpad9`
+- `NumpadDecimal`, `NumpadMultiply`, `NumpadPlus`
+- `NumpadMinus`, `NumpadDivide`, `NumpadEnter`
+
+### 5.3 修饰键作为普通键
+
+**问题:** macOS 实现中 `Key::Meta`, `Key::Shift` 等被当作普通键处理。
+
+**解决:** 移除了这些键，因为修饰键应该通过 `Modifier` 枚举处理，而不是 `Key` 枚举。
+
+### 5.4 Windows 日志
+
+**问题:** Windows 不支持 Unix 的 `dup2` 系统调用。
+
+**解决:** Windows 版本的 `setup_file_logging()` 仅打印日志路径，不重定向 stdout/stderr。
+
+---
+
+## 6. 待完成工作
+
+### Phase 2: 本地多模态模型支持
+
+1. **Vision 模型配置**
+   - 在 `config.rs` 中添加 `vision_model_path`, `vision_mode` 等字段
+
+2. **Vision 引擎模块**
+   - 创建 `src/vision/mod.rs` 定义接口
+   - 创建 `src/vision/llama_cpp.rs` 实现 llama.cpp 视觉支持
+
+3. **流程集成**
+   - 在 `commands.rs` 中添加 "vision" 模式处理
+   - 截图后传递给 Vision 模型处理
+
+4. **前端更新**
+   - `settings.html` 添加 Vision 模式选项
+   - `settings.ts` 添加相关设置逻辑
+
+---
+
+## 7. 文件清单
+
+### 新建文件
+- `src/hotkey/keycode.rs` - 键码抽象
+- `src/hotkey/macos.rs` - macOS 热键实现
+- `src/hotkey/windows.rs` - Windows 热键实现
+- `src/insertion/macos.rs` - macOS 文本插入
+- `src/insertion/windows.rs` - Windows 文本插入
+- `src/screenshot/macos.rs` - macOS 截图
+- `src/screenshot/windows.rs` - Windows 截图
+- `docs/windows-migration-plan.md` - 迁移计划
+- `docs/windows-implementation.md` - 本文档
+
+### 修改文件
+- `Cargo.toml` - 添加 Windows 依赖
+- `src/hotkey/mod.rs` - 重构为跨平台接口
+- `src/insertion/mod.rs` - 重构为跨平台接口
+- `src/insertion/clipboard.rs` - 删除（内容移至 macos.rs）
+- `src/screenshot/mod.rs` - 重构为跨平台接口
+- `src/permissions.rs` - 添加 Windows 存根
+- `src/lib.rs` - 平台化日志和权限
+- `src/commands.rs` - 更新热键调用
+
+---
+
+## 8. 总结
+
+本次迁移将原本 macOS 专用的语音输入工具改造为跨平台应用，主要工作包括：
+
+1. **抽象层设计** - 创建了平台无关的接口，隐藏底层差异
+2. **Windows 实现** - 使用 Win32 API 实现了热键、文本插入、截图功能
+3. **条件编译** - 使用 `#[cfg(target_os = "...")]` 管理平台特定代码
+4. **向后兼容** - macOS 版本功能保持不变
+
+Windows 版本与 macOS 版本的主要差异：
+- 不需要 Accessibility 权限
+- 不需要 Screen Recording 权限
+- 热键使用 Ctrl 代替 Command
+- 日志处理方式不同

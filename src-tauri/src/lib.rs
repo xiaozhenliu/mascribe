@@ -7,6 +7,7 @@ mod insertion;
 mod permissions;
 mod polishing;
 mod recognition;
+mod screenshot;
 mod state;
 mod tray;
 
@@ -20,6 +21,7 @@ use std::sync::Mutex;
 use tauri::Manager;
 
 /// Redirect stdout/stderr to a log file so we can debug the .app bundle.
+#[cfg(target_os = "macos")]
 fn setup_file_logging() {
     use std::fs;
     use std::os::unix::io::AsRawFd;
@@ -46,6 +48,23 @@ fn setup_file_logging() {
     }
 }
 
+/// Windows: Simple file logging setup (no dup2 available)
+#[cfg(target_os = "windows")]
+fn setup_file_logging() {
+    use std::fs;
+
+    let log_dir = dirs::data_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("VoiceInput")
+        .join("logs");
+    let _ = fs::create_dir_all(&log_dir);
+    let log_path = log_dir.join("VoiceInput.log");
+
+    // On Windows, we can't easily redirect stdout/stderr like on Unix
+    // For now, just print the log location
+    println!("[VoiceInput] Logs would go to: {}", log_path.display());
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     setup_file_logging();
@@ -68,6 +87,15 @@ pub fn run() {
         if !ax_trusted {
             println!("[VoiceInput] WARNING: Accessibility not granted! Cmd+V paste will not work.");
         }
+    }
+
+    // Windows: Permissions are handled differently
+    #[cfg(target_os = "windows")]
+    {
+        // Windows prompts for microphone on first use, no pre-authorization needed
+        let _mic_granted = permissions::request_microphone_permission();
+        // Windows doesn't require accessibility permission for SendInput
+        let _ax_trusted = permissions::request_accessibility_permission();
     }
 
     let config = AppConfig::load();

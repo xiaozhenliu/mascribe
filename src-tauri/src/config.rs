@@ -40,6 +40,10 @@ pub struct AppConfig {
     pub api_key: String,
     /// Model name for the online API, e.g. "step-1-flash".
     pub api_model: String,
+    /// Screenshot context mode: "disabled" | "save" | "api"
+    pub screenshot_mode: String,
+    /// Max screenshot dimension for resizing (0 = no limit)
+    pub screenshot_max_size: u32,
 }
 
 impl Default for AppConfig {
@@ -73,6 +77,8 @@ impl Default for AppConfig {
             api_endpoint: String::new(),
             api_key: String::new(),
             api_model: String::new(),
+            screenshot_mode: "disabled".to_string(),
+            screenshot_max_size: 1024,
         }
     }
 }

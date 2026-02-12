@@ -95,6 +95,29 @@
         <textarea id="polish-prompt" rows="8"></textarea>
       </section>
 
+      <!-- Screenshot Context -->
+      <section class="field">
+        <label>Screenshot Context / 截图上下文</label>
+        <p class="hint">Capture current window to provide visual context for AI</p>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="screenshot-mode" value="disabled" checked />
+            <span>Disabled / 关闭</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="screenshot-mode" value="save" />
+            <span>Save Only / 仅保存</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="screenshot-mode" value="api" />
+            <span>Send to API / 发送到 API</span>
+          </label>
+        </div>
+        <p id="screenshot-hint" class="hint" style="margin-top: 8px; color: #666;">
+          <!-- Dynamic hint text -->
+        </p>
+      </section>
+
       <!-- Correction Dictionary -->
       <section class="field">
         <label>Correction Dictionary / 纠错词典</label>

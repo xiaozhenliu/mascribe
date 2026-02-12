@@ -18,9 +18,32 @@ struct ChatRequest {
 }
 
 #[derive(Serialize)]
+#[serde(untagged)]
+enum ChatContent {
+    Text(String),
+    Array(Vec<ContentPart>),
+}
+
+#[derive(Serialize)]
+struct ContentPart {
+    #[serde(rename = "type")]
+    content_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    image_url: Option<ImageUrl>,
+}
+
+#[derive(Serialize)]
+struct ImageUrl {
+    url: String,
+}
+
+#[derive(Serialize)]
 struct ChatMessage {
     role: String,
-    content: String,
+    #[serde(flatten)]
+    content: ChatContent,
 }
 
 #[derive(Deserialize)]
@@ -62,11 +85,13 @@ impl OnlinePolisher {
     }
 
     /// Polish text via online API. The prompt_template should contain {text} and {lang} placeholders.
+    /// If screenshot_base64 is provided, sends it as image_url for vision-capable models.
     pub fn polish(
         &self,
         text: &str,
         prompt_template: &str,
         lang: &str,
+        screenshot_base64: Option<String>,
     ) -> anyhow::Result<String> {
         if text.trim().is_empty() {
             return Ok(text.to_string());
@@ -77,12 +102,35 @@ impl OnlinePolisher {
             .replace("{text}", text)
             .replace("{lang}", lang);
 
+        // Build message content - text only or text + image
+        let messages = if let Some(base64_img) = screenshot_base64 {
+            vec![ChatMessage {
+                role: "user".to_string(),
+                content: ChatContent::Array(vec![
+                    ContentPart {
+                        content_type: "text".to_string(),
+                        text: Some(user_content),
+                        image_url: None,
+                    },
+                    ContentPart {
+                        content_type: "image_url".to_string(),
+                        text: None,
+                        image_url: Some(ImageUrl {
+                            url: format!("data:image/png;base64,{}", base64_img),
+                        }),
+                    },
+                ]),
+            }]
+        } else {
+            vec![ChatMessage {
+                role: "user".to_string(),
+                content: ChatContent::Text(user_content),
+            }]
+        };
+
         let request = ChatRequest {
             model: self.model.clone(),
-            messages: vec![ChatMessage {
-                role: "user".to_string(),
-                content: user_content,
-            }],
+            messages,
             temperature: 0.1,
             max_tokens: 512,
         };
@@ -102,9 +150,7 @@ impl OnlinePolisher {
             .set("Content-Type", "application/json")
             .send_json(ureq::json!({
                 "model": request.model,
-                "messages": request.messages.iter().map(|m| {
-                    serde_json::json!({ "role": m.role, "content": m.content })
-                }).collect::<Vec<_>>(),
+                "messages": request.messages,
                 "temperature": request.temperature,
                 "max_tokens": request.max_tokens,
             }))

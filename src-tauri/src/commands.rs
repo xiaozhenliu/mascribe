@@ -4,6 +4,7 @@ use crate::audio::capture::AudioCapture;
 use crate::config::AppConfig;
 use crate::hotkey;
 use crate::polishing::online::OnlinePolisher;
+use crate::screenshot;
 use crate::state::AppState;
 
 #[tauri::command]
@@ -154,16 +155,51 @@ pub fn stop_recording_and_transcribe(
         return Err("Recording too short".to_string());
     }
 
-    // Read config for recordings dir, polish settings, and API config
+    // Read config for recordings dir, polish settings, API config, and screenshot settings
     let (recordings_dir, polish_prompt, polish_enabled, polish_mode,
-         api_endpoint, api_key, api_model) = {
+         api_endpoint, api_key, api_model, screenshot_mode, screenshot_max_size) = {
         let cfg = state.config.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
         (cfg.recordings_dir.clone(), cfg.polish_prompt.clone(), cfg.polish_enabled,
          cfg.polish_mode.clone(), cfg.api_endpoint.clone(),
-         cfg.api_key.clone(), cfg.api_model.clone())
+         cfg.api_key.clone(), cfg.api_model.clone(),
+         cfg.screenshot_mode.clone(), cfg.screenshot_max_size)
     };
 
-    // 3. Save raw audio to WAV before any processing (using configured path)
+    // 3. Capture screenshot if enabled (before transcription for minimal delay)
+    let screenshot_result: Option<Vec<u8>> = if screenshot_mode != "disabled" {
+        match screenshot::capture_active_window() {
+            Ok(png_bytes) => {
+                // Resize if needed
+                let resized = if screenshot_max_size > 0 {
+                    match screenshot::resize_if_needed(png_bytes.clone(), screenshot_max_size) {
+                        Ok(bytes) => bytes,
+                        Err(e) => {
+                            println!("[screenshot] resize failed: {}, using original", e);
+                            png_bytes
+                        }
+                    }
+                } else {
+                    png_bytes
+                };
+
+                // Always save to disk
+                if let Err(e) = screenshot::save_screenshot(&resized) {
+                    println!("[screenshot] failed to save: {}", e);
+                }
+
+                println!("[screenshot] captured {} bytes", resized.len());
+                Some(resized)
+            }
+            Err(e) => {
+                println!("[screenshot] failed: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    // 4. Save raw audio to WAV before any processing (using configured path)
     {
         let rec_path = std::path::PathBuf::from(&recordings_dir);
         match crate::audio::wav_save::save_wav(&samples, sample_rate, &rec_path) {
@@ -172,7 +208,7 @@ pub fn stop_recording_and_transcribe(
         }
     }
 
-    // 4. Resample to 16kHz (SenseVoice expects 16kHz)
+    // 5. Resample to 16kHz (SenseVoice expects 16kHz)
     let target_rate = 16000u32;
     let samples_16k = if sample_rate != target_rate {
         println!("Resampling from {}Hz to {}Hz ({} -> {} samples)",
@@ -183,7 +219,7 @@ pub fn stop_recording_and_transcribe(
         samples
     };
 
-    // 5. Transcribe
+    // 6. Transcribe
     let (text, detected_lang) = {
         let mut engine = state
             .recognition_engine
@@ -198,7 +234,7 @@ pub fn stop_recording_and_transcribe(
         (text, lang)
     };
 
-    // 6. Apply corrections
+    // 7. Apply corrections
     let corrected = {
         let dict = state
             .correction_dict
@@ -207,7 +243,7 @@ pub fn stop_recording_and_transcribe(
         dict.apply(&text)
     };
 
-    // 6.5. AI polishing — dispatch to local engine or online API based on config
+    // 8. AI polishing — dispatch to local engine or online API based on config
     let polished = if !polish_enabled {
         println!("[polish] disabled in config, skipping");
         corrected.clone()
@@ -258,7 +294,13 @@ pub fn stop_recording_and_transcribe(
                     println!("[polish:api] '{}' (lang={}) via {}", corrected, lang, api_model);
                     let start = std::time::Instant::now();
                     let polisher = OnlinePolisher::new(&api_endpoint, &api_key, &api_model);
-                    match polisher.polish(&corrected, &prompt, lang) {
+                    // Include screenshot if available and mode is "api"
+                    let screenshot_base64 = if screenshot_mode == "api" {
+                        screenshot_result.as_ref().map(|bytes| screenshot::encode_base64(bytes))
+                    } else {
+                        None
+                    };
+                    match polisher.polish(&corrected, &prompt, lang, screenshot_base64) {
                         Ok(result) => {
                             println!("[polish:api] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
                             result
@@ -277,8 +319,8 @@ pub fn stop_recording_and_transcribe(
         }
     };
 
-    // 7. Insert text into active app
-    crate::insertion::clipboard::insert_text(&polished).map_err(|e: anyhow::Error| e.to_string())?;
+    // 9. Insert text into active app
+    crate::insertion::insert_text(&polished).map_err(|e: anyhow::Error| e.to_string())?;
 
     println!("[pipeline] total: {:.1}s", pipeline_start.elapsed().as_secs_f64());
 
@@ -317,8 +359,11 @@ pub fn register_native_hotkey(
         }
     }
 
+    // Parse the hotkey string into a HotkeyDefinition
+    let hotkey_def = hotkey::parse_hotkey(&key)?;
+
     let app_clone = app.clone();
-    let new_handle = hotkey::start_native_listener(&key, move || {
+    let new_handle = hotkey::start_native_listener(&hotkey_def, move || {
         let _ = app_clone.emit("native-hotkey-pressed", ());
     })?;
 
