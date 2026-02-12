@@ -304,10 +304,14 @@ function updateVisionVisibility() {
   if (mode === "disabled") {
     ocr.classList.add("hidden");
     hint.textContent = "";
+  } else if (mode === "native") {
+    // macOS built-in Vision framework — no configuration needed
+    ocr.classList.add("hidden");
+    hint.textContent = "Using macOS built-in text recognition (fast, no setup required)";
   } else {
-    // OCR enabled
+    // Ollama API OCR — show endpoint/model config
     ocr.classList.remove("hidden");
-    hint.textContent = "✓ Screenshot → OCR extract text → AI polishing uses screen text as context for homophone correction.";
+    hint.textContent = "Using Ollama OCR model (requires Ollama running locally)";
   }
 }
 

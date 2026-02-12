@@ -81,10 +81,10 @@ impl PolishingEngine {
 
         // Create a fresh context for each inference call.
         let ctx_params = LlamaContextParams::default()
-            .with_n_ctx(NonZeroU32::new(1024))
+            .with_n_ctx(NonZeroU32::new(2048))
             .with_n_threads(4)
             .with_n_threads_batch(4)
-            .with_n_batch(512);
+            .with_n_batch(2048);
 
         let mut ctx = self
             .model
@@ -106,7 +106,7 @@ impl PolishingEngine {
         );
 
         // Feed prompt tokens into batch
-        let mut batch = LlamaBatch::new(1024, 1);
+        let mut batch = LlamaBatch::new(2048, 1);
         batch
             .add_sequence(&tokens, 0, false)
             .map_err(|e| anyhow::anyhow!("Batch add failed: {}", e))?;

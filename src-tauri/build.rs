@@ -7,5 +7,8 @@ fn main() {
     // Link AVFoundation so AVCaptureDevice is available for microphone permission requests
     println!("cargo:rustc-link-lib=framework=AVFoundation");
 
+    // Link Vision framework for native OCR (VNRecognizeTextRequest)
+    println!("cargo:rustc-link-lib=framework=Vision");
+
     tauri_build::build()
 }

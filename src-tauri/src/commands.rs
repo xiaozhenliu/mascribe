@@ -248,19 +248,29 @@ pub fn stop_recording_and_transcribe(
 
     // 8a. OCR: extract screen context from screenshot (if vision/OCR enabled)
     let screen_context: Option<String> = if vision_mode != "disabled" && screenshot_result.is_some() {
-        let screenshot_base64 = screenshot::encode_base64(screenshot_result.as_ref().unwrap());
-        println!("[ocr] running OCR via {} model={}", ocr_endpoint, ocr_model);
         let start = std::time::Instant::now();
 
-        match ocr_screenshot(&ocr_endpoint, &ocr_model, &screenshot_base64) {
+        let ocr_result = if vision_mode == "native" {
+            // Native macOS Vision framework OCR (fast, <0.5s)
+            println!("[ocr:native] running macOS Vision OCR...");
+            crate::ocr::recognize_text(screenshot_result.as_ref().unwrap())
+                .map_err(|e| anyhow::anyhow!("{}", e))
+        } else {
+            // Ollama API OCR (slower, 5-7s, but supports custom models)
+            let screenshot_base64 = screenshot::encode_base64(screenshot_result.as_ref().unwrap());
+            println!("[ocr:api] running OCR via {} model={}", ocr_endpoint, ocr_model);
+            ocr_screenshot(&ocr_endpoint, &ocr_model, &screenshot_base64)
+        };
+
+        match ocr_result {
             Ok(text) => {
-                println!("[ocr] extracted {} chars ({:.1}s): '{}'",
-                    text.len(), start.elapsed().as_secs_f64(),
+                println!("[ocr:{}] extracted {} chars ({:.1}s): '{}'",
+                    vision_mode, text.len(), start.elapsed().as_secs_f64(),
                     text.chars().take(100).collect::<String>());
                 Some(text)
             }
             Err(e) => {
-                println!("[ocr] ERROR: {}, continuing without screen context", e);
+                println!("[ocr:{}] ERROR: {}, continuing without screen context", vision_mode, e);
                 None
             }
         }
@@ -269,21 +279,21 @@ pub fn stop_recording_and_transcribe(
     };
 
     // 8b. AI polishing — inject screen context only for online API mode
-    //     Local model (Qwen 2.5 1.5B) has very limited context (~512 tokens),
-    //     so OCR text would exceed batch size and crash llama.cpp.
+    //     Local Qwen 2.5 1.5B can't handle OCR context (outputs the context verbatim).
     let effective_prompt = if let Some(ref ctx) = screen_context {
         if polish_mode == "api" {
-            // Truncate OCR to ~500 chars to keep total prompt reasonable
             let truncated: String = ctx.chars().take(500).collect();
             let base = if polish_prompt.is_empty() {
                 crate::config::DEFAULT_POLISH_PROMPT.to_string()
             } else {
                 polish_prompt.clone()
             };
-            format!("{}\n\n--- 当前屏幕内容 (OCR) ---\n{}\n--- 屏幕内容结束 ---",
-                base, truncated)
+            let combined = format!("{}\n\n--- 当前屏幕内容 (OCR) ---\n{}\n--- 屏幕内容结束 ---",
+                base, truncated);
+            println!("[ocr] injected {} chars of screen context into polish prompt", truncated.len());
+            combined
         } else {
-            println!("[ocr] screen context available but polish_mode='{}', skipping injection (local model too small)", polish_mode);
+            println!("[ocr] skipping context injection for polish_mode='{}' (local model too weak)", polish_mode);
             polish_prompt.clone()
         }
     } else {

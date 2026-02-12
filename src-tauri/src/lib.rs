@@ -4,6 +4,7 @@ mod config;
 mod correction;
 pub mod hotkey;
 mod insertion;
+mod ocr;
 mod permissions;
 mod polishing;
 mod recognition;
