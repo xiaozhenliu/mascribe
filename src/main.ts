@@ -288,6 +288,15 @@ async function toggleRecording() {
 let currentShortcut: string | null = null;
 let usingNativeHotkey = false; // true when CGEventTap fallback is active
 
+// Keys that must use native hotkey (CGEventTap on macOS, SetWindowsHookEx on Windows)
+// because tauri-plugin-global-shortcut doesn't support them properly
+const NATIVE_ONLY_KEYS = ["ContextMenu", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20", "F21", "F22", "F23", "F24"];
+
+function shouldUseNativeHotkey(shortcut: string): boolean {
+  // Check if the shortcut contains any native-only keys
+  return NATIVE_ONLY_KEYS.some(key => shortcut.includes(key));
+}
+
 async function registerShortcut(shortcut: string) {
   // Unregister previous shortcut (whichever system was active)
   if (currentShortcut) {
@@ -299,6 +308,21 @@ async function registerShortcut(shortcut: string) {
       }
     } catch { /* may not be registered */ }
     usingNativeHotkey = false;
+  }
+
+  // For special keys, skip tauri-plugin-global-shortcut and go directly to native
+  if (shouldUseNativeHotkey(shortcut)) {
+    console.log(`[main] using native hotkey for special key: ${shortcut}`);
+    try {
+      await invoke("register_native_hotkey", { key: shortcut });
+      usingNativeHotkey = true;
+      currentShortcut = shortcut;
+      console.log(`[main] registered shortcut via native listener: ${shortcut}`);
+      return;
+    } catch (e) {
+      console.error(`[main] native hotkey failed for "${shortcut}": ${e}`);
+      throw e;
+    }
   }
 
   // Try tauri-plugin-global-shortcut first (handles standard combos like Alt+Space)
@@ -315,7 +339,7 @@ async function registerShortcut(shortcut: string) {
       await invoke("register_native_hotkey", { key: shortcut });
       usingNativeHotkey = true;
       currentShortcut = shortcut;
-      console.log(`[main] registered shortcut via native CGEventTap: ${shortcut}`);
+      console.log(`[main] registered shortcut via native listener: ${shortcut}`);
     } catch (e2) {
       console.error(`[main] native hotkey also failed for "${shortcut}": ${e2}`);
       throw e2;

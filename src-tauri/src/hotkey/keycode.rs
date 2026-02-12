@@ -46,6 +46,7 @@ pub enum Key {
     Down,
     Left,
     Right,
+    ContextMenu,
     // Numpad keys
     Numpad0, Numpad1, Numpad2, Numpad3, Numpad4,
     Numpad5, Numpad6, Numpad7, Numpad8, Numpad9,
@@ -134,6 +135,7 @@ impl fmt::Display for Key {
             Key::Down => write!(f, "Down"),
             Key::Left => write!(f, "Left"),
             Key::Right => write!(f, "Right"),
+            Key::ContextMenu => write!(f, "ContextMenu"),
             Key::Comma => write!(f, ","),
             Key::Period => write!(f, "."),
             Key::Slash => write!(f, "/"),
@@ -273,6 +275,7 @@ fn parse_key(key_str: &str) -> Result<Key, String> {
         "down" | "downarrow" => Ok(Key::Down),
         "left" | "leftarrow" => Ok(Key::Left),
         "right" | "rightarrow" => Ok(Key::Right),
+        "contextmenu" | "context_menu" | "context" | "menu" => Ok(Key::ContextMenu),
         "," | "comma" => Ok(Key::Comma),
         "." | "period" | "dot" => Ok(Key::Period),
         "/" | "slash" => Ok(Key::Slash),
@@ -381,5 +384,12 @@ mod tests {
             key: Key::S,
         };
         assert_eq!(hk.to_string(), "Ctrl+Shift+S");
+    }
+
+    #[test]
+    fn test_parse_context_menu() {
+        let hk = parse_hotkey("ContextMenu").unwrap();
+        assert!(hk.modifiers.is_empty());
+        assert_eq!(hk.key, Key::ContextMenu);
     }
 }
