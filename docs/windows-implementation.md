@@ -317,26 +317,51 @@ pub fn insert_text(text: &str) -> anyhow::Result<()> {
 
 **解决:** Windows 版本的 `setup_file_logging()` 仅打印日志路径，不重定向 stdout/stderr。
 
+### 5.5 特殊热键处理
+
+**问题:** `ContextMenu`、`F13-F24` 等特殊键无法通过 `tauri-plugin-global-shortcut` 正确注册。
+
+**解决:** 在 `main.ts` 中添加 `NATIVE_ONLY_KEYS` 列表，对这些键直接跳过插件，使用原生热键 API：
+
+```typescript
+const NATIVE_ONLY_KEYS = ["ContextMenu", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20", "F21", "F22", "F23", "F24"];
+
+function shouldUseNativeHotkey(shortcut: string): boolean {
+  return NATIVE_ONLY_KEYS.some(key => shortcut.includes(key));
+}
+```
+
+对于特殊键，前端直接调用 `register_native_hotkey`，使用 Windows SetWindowsHookEx 捕获。
+
 ---
 
 ## 6. 待完成工作
 
-### Phase 2: 本地多模态模型支持
+### Phase 2: 本地多模态模型支持（规划中）
+
+> **状态**: 尚未实现，需要进一步调研 llama.cpp 的视觉模型支持
 
 1. **Vision 模型配置**
    - 在 `config.rs` 中添加 `vision_model_path`, `vision_mode` 等字段
+   - 默认路径: `%USERPROFILE%\.openclaw\models\minicpm-v-2_6\`
 
 2. **Vision 引擎模块**
    - 创建 `src/vision/mod.rs` 定义接口
    - 创建 `src/vision/llama_cpp.rs` 实现 llama.cpp 视觉支持
+   - 需要支持 multimodal projector (mmproj.bin)
 
 3. **流程集成**
    - 在 `commands.rs` 中添加 "vision" 模式处理
    - 截图后传递给 Vision 模型处理
+   - 结合语音转写结果和图像内容进行 AI 处理
 
 4. **前端更新**
    - `settings.html` 添加 Vision 模式选项
    - `settings.ts` 添加相关设置逻辑
+
+5. **模型推荐（RTX 4060 8GB）**
+   - MiniCPM-V 2.6 INT4 (6-8GB VRAM)
+   - Qwen2-VL 7B INT4 (6-8GB VRAM)
 
 ---
 
@@ -355,27 +380,38 @@ pub fn insert_text(text: &str) -> anyhow::Result<()> {
 
 ### 修改文件
 - `Cargo.toml` - 添加 Windows 依赖
-- `src/hotkey/mod.rs` - 重构为跨平台接口
+- `src/hotkey/mod.rs` - 重构为跨平台接口，添加 F13-F24 支持
+- `src/hotkey/keycode.rs` - 添加 ContextMenu 和 F13-F24 键定义
 - `src/insertion/mod.rs` - 重构为跨平台接口
 - `src/insertion/clipboard.rs` - 删除（内容移至 macos.rs）
 - `src/screenshot/mod.rs` - 重构为跨平台接口
 - `src/permissions.rs` - 添加 Windows 存根
 - `src/lib.rs` - 平台化日志和权限
 - `src/commands.rs` - 更新热键调用
+- `src/main.ts` - 添加特殊热键处理逻辑（NATIVE_ONLY_KEYS）
 
 ---
 
-## 8. 总结
+## 8. 更新记录
+
+### 2024-02-12
+- 添加 `ContextMenu` 键支持
+- 添加 F13-F24 功能键支持
+- 修复特殊热键在前端的处理逻辑
+
+## 9. 总结
 
 本次迁移将原本 macOS 专用的语音输入工具改造为跨平台应用，主要工作包括：
 
 1. **抽象层设计** - 创建了平台无关的接口，隐藏底层差异
 2. **Windows 实现** - 使用 Win32 API 实现了热键、文本插入、截图功能
-3. **条件编译** - 使用 `#[cfg(target_os = "...")]` 管理平台特定代码
-4. **向后兼容** - macOS 版本功能保持不变
+3. **特殊热键支持** - 对 `ContextMenu`、`F13-F24` 等键使用原生 API
+4. **条件编译** - 使用 `#[cfg(target_os = "...")]` 管理平台特定代码
+5. **向后兼容** - macOS 版本功能保持不变
 
 Windows 版本与 macOS 版本的主要差异：
 - 不需要 Accessibility 权限
 - 不需要 Screen Recording 权限
 - 热键使用 Ctrl 代替 Command
 - 日志处理方式不同
+- 特殊键（ContextMenu、F13-F24）使用原生热键 API

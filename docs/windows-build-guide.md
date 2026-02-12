@@ -254,6 +254,30 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ---
 
+## 热键配置说明
+
+### 支持的热键类型
+
+**标准组合键**（使用 tauri-plugin-global-shortcut）：
+- `Alt+Space` - Alt+空格
+- `Ctrl+Shift+S` - Ctrl+Shift+S
+- `CmdOrCtrl+Shift+A` - Command/Ctrl+Shift+A
+
+**特殊键**（使用原生 Windows API）：
+- `ContextMenu` - 菜单键（键盘上的右键菜单键）
+- `F13` - `F24` - 扩展功能键
+
+### 特殊键说明
+
+某些键（如 `ContextMenu`、`F13-F24`）无法通过标准全局快捷键 API 注册，应用会自动使用 Windows 原生低级别键盘钩子（SetWindowsHookEx）来捕获这些键。
+
+在设置界面中：
+- 点击热键输入框并按想要的组合键
+- 或者使用 "Presets" 下拉菜单选择特殊键
+- `ContextMenu` 键可以通过下拉菜单选择，或在输入框中右键点击捕获
+
+---
+
 ## 需要帮助？
 
 如果遇到问题：
