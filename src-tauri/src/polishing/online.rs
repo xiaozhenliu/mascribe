@@ -150,7 +150,15 @@ impl OnlinePolisher {
             .set("Authorization", &format!("Bearer {}", self.api_key))
             .set("Content-Type", "application/json")
             .send_json(json_body)
-            .map_err(|e| anyhow::anyhow!("API request failed: {}", e))?;
+            .map_err(|e| match e {
+                ureq::Error::Status(code, resp) => {
+                    let body = resp.into_string().unwrap_or_default();
+                    let preview: String = body.chars().take(300).collect();
+                    println!("[polish:api] HTTP {} body: {}", code, preview);
+                    anyhow::anyhow!("API request failed: HTTP {} — {}", code, preview)
+                }
+                other => anyhow::anyhow!("API request failed: {}", other),
+            })?;
 
         let body: ChatResponse = response
             .into_json()

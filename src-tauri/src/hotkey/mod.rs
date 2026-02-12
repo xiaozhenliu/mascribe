@@ -210,7 +210,6 @@ mod macos {
 
         // Clone hotkey data for the thread
         let hotkey_key = hotkey.key;
-        let is_context_menu = matches!(hotkey.key, Key::ContextMenu);
 
         thread::spawn(move || {
             let current_loop = CFRunLoop::get_current();
@@ -220,37 +219,12 @@ mod macos {
             }
             let _ = tx.send(SendableRunLoop(loop_ref));
 
-            // Track when hotkey was last pressed to suppress associated right-click
-            let last_hotkey_time = Arc::new(std::sync::Mutex::new(std::time::Instant::now().checked_sub(std::time::Duration::from_secs(10)).unwrap_or_else(std::time::Instant::now)));
-            let last_hotkey_time2 = last_hotkey_time.clone();
-
-            // Listen for KeyDown + right-click events (ContextMenu key triggers both)
-            let mut event_types = vec![CGEventType::KeyDown];
-            if is_context_menu {
-                event_types.push(CGEventType::RightMouseDown);
-                event_types.push(CGEventType::RightMouseUp);
-            }
-
             let tap_result = CGEventTap::new(
                 CGEventTapLocation::Session,
                 CGEventTapPlacement::HeadInsertEventTap,
                 CGEventTapOptions::Default,
-                event_types,
-                move |_proxy, etype, event| {
-                    // Suppress right-click events that follow closely after ContextMenu key press
-                    // CGEventType doesn't implement PartialEq, compare as u32
-                    let etype_raw = etype as u32;
-                    let is_right_click = etype_raw == CGEventType::RightMouseDown as u32
-                        || etype_raw == CGEventType::RightMouseUp as u32;
-                    if is_context_menu && is_right_click {
-                        if let Ok(t) = last_hotkey_time2.lock() {
-                            if t.elapsed().as_millis() < 100 {
-                                return None; // Swallow the right-click
-                            }
-                        }
-                        return Some(event.clone());
-                    }
-
+                vec![CGEventType::KeyDown],
+                move |_proxy, _etype, event| {
                     let kc = event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u16;
                     let flags = event.get_flags();
 
@@ -259,11 +233,6 @@ mod macos {
                         && !stop_flag_clone.load(Ordering::SeqCst)
                         && (flags & target_flags) == target_flags
                     {
-                        if is_context_menu {
-                            if let Ok(mut t) = last_hotkey_time.lock() {
-                                *t = std::time::Instant::now();
-                            }
-                        }
                         on_press();
                         // Swallow the event so it doesn't reach the active app
                         return None;
