@@ -19,6 +19,9 @@ interface AppConfig {
   api_model: string;
   screenshot_mode: string;
   screenshot_max_size: number;
+  vision_model_path: string;
+  vision_mode: string;
+  vision_max_image_size: number;
 }
 
 // ── DOM refs ──
@@ -34,6 +37,10 @@ const apiModel = () => document.getElementById("api-model") as HTMLInputElement;
 const apiSettings = () => document.getElementById("api-settings") as HTMLElement;
 const polishPromptSection = () => document.getElementById("polish-prompt-section") as HTMLElement;
 const screenshotHint = () => document.getElementById("screenshot-hint") as HTMLElement;
+const visionHint = () => document.getElementById("vision-hint") as HTMLElement;
+const visionModelSection = () => document.getElementById("vision-model-section") as HTMLElement;
+const visionModelPath = () => document.getElementById("vision-model-path") as HTMLInputElement;
+const browseVisionBtn = () => document.getElementById("browse-vision-btn") as HTMLButtonElement;
 const btnSave = () => document.getElementById("btn-save") as HTMLButtonElement;
 let originalConfig: AppConfig | null = null;
 
@@ -239,6 +246,7 @@ function setScreenshotMode(mode: string) {
 function updateScreenshotHint() {
   const screenshotMode = getScreenshotMode();
   const { enabled: polishEnabled, mode: polishMode } = getPolishMode();
+  const visionMode = getVisionMode();
   const hint = screenshotHint();
 
   if (screenshotMode === "disabled") {
@@ -246,10 +254,12 @@ function updateScreenshotHint() {
   } else if (screenshotMode === "save") {
     hint.textContent = "Screenshots will be saved to ~/Library/Application Support/com.mac-voice-input/screenshots/";
   } else if (screenshotMode === "api") {
-    if (!polishEnabled) {
+    if (visionMode === "local") {
+      hint.textContent = "✓ Screenshots will be processed by the local vision model.";
+    } else if (!polishEnabled) {
       hint.textContent = "⚠️ AI Polishing is disabled. Screenshots will be saved but not sent to API.";
     } else if (polishMode === "local") {
-      hint.textContent = "⚠️ Local model doesn't support images. Screenshots will be saved but not sent. Use Online API mode for vision support.";
+      hint.textContent = "⚠️ Local text model doesn't support images. Enable Vision Model or use Online API mode.";
     } else {
       hint.textContent = "✓ Screenshots will be sent to the vision-capable API along with transcribed text.";
     }
@@ -261,6 +271,71 @@ function setupScreenshotRadios() {
   for (const r of radios) {
     r.addEventListener("change", updateScreenshotHint);
   }
+}
+
+// ── Vision mode ──
+
+/** Get current vision mode from radio buttons */
+function getVisionMode(): string {
+  const radios = document.querySelectorAll<HTMLInputElement>('input[name="vision-mode"]');
+  for (const r of radios) {
+    if (r.checked) {
+      return r.value;
+    }
+  }
+  return "disabled";
+}
+
+/** Set vision mode radio */
+function setVisionMode(mode: string) {
+  const radios = document.querySelectorAll<HTMLInputElement>('input[name="vision-mode"]');
+  for (const r of radios) {
+    r.checked = r.value === mode;
+  }
+  updateVisionVisibility();
+}
+
+/** Update vision UI visibility and hint */
+function updateVisionVisibility() {
+  const mode = getVisionMode();
+  const section = visionModelSection();
+  const hint = visionHint();
+
+  if (mode === "disabled") {
+    section.classList.add("hidden");
+    hint.textContent = "";
+  } else {
+    section.classList.remove("hidden");
+    hint.textContent = "⚠️ Vision model support is experimental. Requires MiniCPM-V or Qwen2-VL model files.";
+  }
+}
+
+function setupVisionRadios() {
+  const radios = document.querySelectorAll<HTMLInputElement>('input[name="vision-mode"]');
+  for (const r of radios) {
+    r.addEventListener("change", () => {
+      updateVisionVisibility();
+      updateScreenshotHint();
+    });
+  }
+}
+
+/** Setup vision model path browser */
+async function setupVisionBrowse() {
+  browseVisionBtn().addEventListener("click", async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        defaultPath: visionModelPath().value || undefined,
+      });
+      if (selected && typeof selected === "string") {
+        visionModelPath().value = selected;
+      }
+    } catch (e) {
+      console.error("browse error:", e);
+    }
+  });
 }
 
 // ── Correction Dictionary ──
@@ -385,6 +460,10 @@ async function loadConfig() {
 
     // Screenshot mode
     setScreenshotMode(config.screenshot_mode || "disabled");
+
+    // Vision mode
+    setVisionMode(config.vision_mode || "disabled");
+    visionModelPath().value = config.vision_model_path || "";
   } catch (e) {
     console.error("Failed to load config:", e);
     showToast("Failed to load settings", "error");
@@ -396,6 +475,7 @@ async function saveConfig() {
 
   const { enabled, mode } = getPolishMode();
   const screenshotMode = getScreenshotMode();
+  const visionMode = getVisionMode();
 
   const updated: AppConfig = {
     ...originalConfig,
@@ -409,6 +489,9 @@ async function saveConfig() {
     api_model: apiModel().value.trim(),
     screenshot_mode: screenshotMode,
     screenshot_max_size: originalConfig.screenshot_max_size || 1024,
+    vision_mode: visionMode,
+    vision_model_path: visionModelPath().value.trim(),
+    vision_max_image_size: originalConfig.vision_max_image_size || 448,
   };
 
   try {
@@ -431,11 +514,13 @@ async function saveConfig() {
 window.addEventListener("DOMContentLoaded", async () => {
   setupPolishRadios();
   setupScreenshotRadios();
+  setupVisionRadios();
   await loadConfig();
   await loadCorrections();
   setupShortcutRecorder();
   setupCorrections();
   await setupBrowse();
+  await setupVisionBrowse();
 
   btnSave().addEventListener("click", saveConfig);
 });

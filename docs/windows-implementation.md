@@ -335,33 +335,60 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
 
 ---
 
-## 6. 待完成工作
+## 6. Phase 2: 本地多模态模型支持
 
-### Phase 2: 本地多模态模型支持（规划中）
+### 6.1 实现状态
 
-> **状态**: 尚未实现，需要进一步调研 llama.cpp 的视觉模型支持
+> **状态**: ✅ 基础框架已实现（2024-02-12）
+>
+> **注意**: 当前为 stub 实现，完整后端需要 ONNX Runtime 或 llama.cpp vision 支持
 
-1. **Vision 模型配置**
-   - 在 `config.rs` 中添加 `vision_model_path`, `vision_mode` 等字段
-   - 默认路径: `%USERPROFILE%\.openclaw\models\minicpm-v-2_6\`
+### 6.2 已完成工作
 
-2. **Vision 引擎模块**
-   - 创建 `src/vision/mod.rs` 定义接口
-   - 创建 `src/vision/llama_cpp.rs` 实现 llama.cpp 视觉支持
-   - 需要支持 multimodal projector (mmproj.bin)
+#### Vision 模型配置
+- ✅ `config.rs` 添加 `vision_model_path`, `vision_mode`, `vision_max_image_size` 字段
+- ✅ 默认路径: `~/.openclaw/models/minicpm-v-2_6/`
 
-3. **流程集成**
-   - 在 `commands.rs` 中添加 "vision" 模式处理
-   - 截图后传递给 Vision 模型处理
-   - 结合语音转写结果和图像内容进行 AI 处理
+#### Vision 引擎模块
+- ✅ 创建 `src/vision/mod.rs` 定义接口
+  - `VisionEngine` trait: 处理图像 + 文本提示
+  - `VisionConfig`: 模型配置
+  - `preprocess_image()`: 图像预处理（调整大小）
+  - `build_vision_prompt()`: 构建视觉提示
+- ⚠️ 当前为 stub 实现，返回 `VisionError::NotSupported`
 
-4. **前端更新**
-   - `settings.html` 添加 Vision 模式选项
-   - `settings.ts` 添加相关设置逻辑
+#### 流程集成
+- ✅ `commands.rs` 集成 vision 处理流程
+  - 当 `vision_mode = "local"` 且截图可用时，优先使用 vision 模型
+  - Vision 失败时自动回退到文本润色
+  - 支持图像预处理（调整大小）
 
-5. **模型推荐（RTX 4060 8GB）**
-   - MiniCPM-V 2.6 INT4 (6-8GB VRAM)
-   - Qwen2-VL 7B INT4 (6-8GB VRAM)
+#### 前端更新
+- ✅ `settings.html` 添加 Vision Model 部分
+  - "Disabled / 关闭" 选项
+  - "Local Model / 本地模型 ⭐" 选项
+  - 模型路径输入框
+- ✅ `settings.ts` 添加 vision 设置逻辑
+  - `getVisionMode()`, `setVisionMode()`
+  - `updateVisionVisibility()` 控制 UI 显示
+  - 保存/加载配置
+
+### 6.3 待完成工作
+
+#### 后端实现（需要进一步调研）
+1. **ONNX Runtime 后端**
+   - MiniCPM-V 有官方 ONNX 导出工具
+   - 需要添加 `ort` crate 依赖
+   - 实现 `OnnxVisionEngine`
+
+2. **llama.cpp 后端**
+   - 等待 `llama-cpp-2` crate 支持视觉模型
+   - 或手动编译 llama.cpp vision 分支
+   - 需要处理 `mmproj.bin` multimodal projector
+
+### 6.4 模型推荐（RTX 4060 8GB）
+- MiniCPM-V 2.6 INT4 (6-8GB VRAM)
+- Qwen2-VL 7B INT4 (6-8GB VRAM)
 
 ---
 
@@ -375,6 +402,7 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
 - `src/insertion/windows.rs` - Windows 文本插入
 - `src/screenshot/macos.rs` - macOS 截图
 - `src/screenshot/windows.rs` - Windows 截图
+- `src/vision/mod.rs` - Vision 模型接口（Phase 2）
 - `docs/windows-migration-plan.md` - 迁移计划
 - `docs/windows-implementation.md` - 本文档
 
@@ -386,9 +414,12 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
 - `src/insertion/clipboard.rs` - 删除（内容移至 macos.rs）
 - `src/screenshot/mod.rs` - 重构为跨平台接口
 - `src/permissions.rs` - 添加 Windows 存根
-- `src/lib.rs` - 平台化日志和权限
-- `src/commands.rs` - 更新热键调用
+- `src/lib.rs` - 平台化日志和权限，添加 vision 模块
+- `src/commands.rs` - 更新热键调用，集成 vision 处理流程
+- `src/config.rs` - 添加 vision 配置字段
 - `src/main.ts` - 添加特殊热键处理逻辑（NATIVE_ONLY_KEYS）
+- `settings.html` - 添加 Vision Model UI
+- `settings.ts` - 添加 vision 设置逻辑
 
 ---
 
@@ -398,6 +429,13 @@ function shouldUseNativeHotkey(shortcut: string): boolean {
 - 添加 `ContextMenu` 键支持
 - 添加 F13-F24 功能键支持
 - 修复特殊热键在前端的处理逻辑
+
+### 2024-02-12 (Phase 2)
+- 添加 Vision 模型配置字段 (`vision_model_path`, `vision_mode`, `vision_max_image_size`)
+- 创建 `src/vision/mod.rs` 接口模块（stub 实现）
+- 更新 `settings.html` 添加 Vision Model UI
+- 更新 `settings.ts` 添加 vision 设置逻辑
+- 在 `commands.rs` 集成 vision 处理流程（优先 vision，失败回退到文本润色）
 
 ## 9. 总结
 

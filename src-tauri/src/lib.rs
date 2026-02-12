@@ -10,6 +10,7 @@ mod recognition;
 mod screenshot;
 mod state;
 mod tray;
+mod vision;
 
 use audio::capture::AudioBuffer;
 use config::AppConfig;

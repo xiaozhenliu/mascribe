@@ -6,6 +6,7 @@ use crate::hotkey;
 use crate::polishing::online::OnlinePolisher;
 use crate::screenshot;
 use crate::state::AppState;
+use crate::vision::{self, VisionConfig};
 
 #[tauri::command]
 pub fn show_window(app: AppHandle) -> Result<(), String> {
@@ -155,14 +156,17 @@ pub fn stop_recording_and_transcribe(
         return Err("Recording too short".to_string());
     }
 
-    // Read config for recordings dir, polish settings, API config, and screenshot settings
+    // Read config for recordings dir, polish settings, API config, screenshot settings, and vision settings
     let (recordings_dir, polish_prompt, polish_enabled, polish_mode,
-         api_endpoint, api_key, api_model, screenshot_mode, screenshot_max_size) = {
+         api_endpoint, api_key, api_model, screenshot_mode, screenshot_max_size,
+         vision_mode, vision_model_path, vision_max_image_size) = {
         let cfg = state.config.lock().map_err(|e: std::sync::PoisonError<_>| e.to_string())?;
         (cfg.recordings_dir.clone(), cfg.polish_prompt.clone(), cfg.polish_enabled,
          cfg.polish_mode.clone(), cfg.api_endpoint.clone(),
          cfg.api_key.clone(), cfg.api_model.clone(),
-         cfg.screenshot_mode.clone(), cfg.screenshot_max_size)
+         cfg.screenshot_mode.clone(), cfg.screenshot_max_size,
+         cfg.vision_mode.clone(), cfg.vision_model_path.clone(),
+         cfg.vision_max_image_size)
     };
 
     // 3. Capture screenshot if enabled (before transcription for minimal delay)
@@ -243,79 +247,70 @@ pub fn stop_recording_and_transcribe(
         dict.apply(&text)
     };
 
-    // 8. AI polishing — dispatch to local engine or online API based on config
-    let polished = if !polish_enabled {
-        println!("[polish] disabled in config, skipping");
+    // 8. AI polishing / Vision processing — dispatch based on config
+    let polished = if !polish_enabled && vision_mode != "local" {
+        println!("[polish] disabled in config and vision not enabled, skipping");
         corrected.clone()
     } else {
-        match polish_mode.as_str() {
-            "local" => {
-                // Local GGUF model polishing
-                if let Some(ref engine_mutex) = state.polishing_engine {
-                    match engine_mutex.lock() {
-                        Ok(engine) => {
-                            println!("[polish:local] '{}' (lang={})", corrected, detected_lang);
-                            let start = std::time::Instant::now();
-                            let custom = if polish_prompt.is_empty() { None } else { Some(polish_prompt.as_str()) };
-                            let lang_ref = if detected_lang.is_empty() { None } else { Some(detected_lang.as_str()) };
-                            match engine.polish(&corrected, custom, lang_ref) {
-                                Ok(result) => {
-                                    println!("[polish:local] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
-                                    result
-                                }
+        // Check if we should use vision model
+        let use_vision = vision_mode == "local" && screenshot_result.is_some();
+
+        if use_vision {
+            // Try to use vision model
+            println!("[vision] attempting to process with vision model");
+            let vision_config = VisionConfig {
+                model_path: vision_model_path.clone(),
+                max_image_size: vision_max_image_size,
+                num_threads: 4,
+            };
+
+            match vision::load_vision_engine(vision_config) {
+                Ok(engine) => {
+                    if engine.is_ready() {
+                        let prompt = vision::build_vision_prompt(&corrected, &detected_lang);
+                        let start = std::time::Instant::now();
+
+                        // Preprocess image if needed
+                        let processed_image = if vision_max_image_size > 0 {
+                            match vision::preprocess_image(screenshot_result.as_ref().unwrap(), vision_max_image_size) {
+                                Ok(img) => img,
                                 Err(e) => {
-                                    println!("[polish:local] ERROR: {}, using original", e);
-                                    corrected.clone()
+                                    println!("[vision] preprocess failed: {}, using original", e);
+                                    screenshot_result.as_ref().unwrap().clone()
                                 }
                             }
+                        } else {
+                            screenshot_result.as_ref().unwrap().clone()
+                        };
+
+                        match engine.process(&processed_image, &prompt) {
+                            Ok(result) => {
+                                println!("[vision] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
+                                result
+                            }
+                            Err(e) => {
+                                println!("[vision] ERROR: {}, falling back to text polish", e);
+                                // Fall back to text-only polishing
+                                polish_text_only(&corrected, &detected_lang, polish_enabled, &polish_mode,
+                                    &polish_prompt, &api_endpoint, &api_key, &api_model, &state)
+                            }
                         }
-                        Err(e) => {
-                            println!("[polish:local] lock error: {}, using original", e);
-                            corrected.clone()
-                        }
-                    }
-                } else {
-                    println!("[polish:local] engine not loaded, skipping");
-                    corrected.clone()
-                }
-            }
-            "api" => {
-                // Online API polishing (OpenAI-compatible)
-                if api_endpoint.is_empty() || api_key.is_empty() || api_model.is_empty() {
-                    println!("[polish:api] API not configured (endpoint/key/model empty), skipping");
-                    corrected.clone()
-                } else {
-                    let lang = if detected_lang.is_empty() { "auto" } else { &detected_lang };
-                    let prompt = if polish_prompt.is_empty() {
-                        crate::config::DEFAULT_POLISH_PROMPT.to_string()
                     } else {
-                        polish_prompt.clone()
-                    };
-                    println!("[polish:api] '{}' (lang={}) via {}", corrected, lang, api_model);
-                    let start = std::time::Instant::now();
-                    let polisher = OnlinePolisher::new(&api_endpoint, &api_key, &api_model);
-                    // Include screenshot if available and mode is "api"
-                    let screenshot_base64 = if screenshot_mode == "api" {
-                        screenshot_result.as_ref().map(|bytes| screenshot::encode_base64(bytes))
-                    } else {
-                        None
-                    };
-                    match polisher.polish(&corrected, &prompt, lang, screenshot_base64) {
-                        Ok(result) => {
-                            println!("[polish:api] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
-                            result
-                        }
-                        Err(e) => {
-                            println!("[polish:api] ERROR: {}, using original", e);
-                            corrected.clone()
-                        }
+                        println!("[vision] engine not ready, falling back to text polish");
+                        polish_text_only(&corrected, &detected_lang, polish_enabled, &polish_mode,
+                            &polish_prompt, &api_endpoint, &api_key, &api_model, &state)
                     }
                 }
+                Err(e) => {
+                    println!("[vision] failed to load engine: {}, falling back to text polish", e);
+                    polish_text_only(&corrected, &detected_lang, polish_enabled, &polish_mode,
+                        &polish_prompt, &api_endpoint, &api_key, &api_model, &state)
+                }
             }
-            _ => {
-                println!("[polish] unknown mode '{}', skipping", polish_mode);
-                corrected.clone()
-            }
+        } else {
+            // Use text-only polishing
+            polish_text_only(&corrected, &detected_lang, polish_enabled, &polish_mode,
+                &polish_prompt, &api_endpoint, &api_key, &api_model, &state)
         }
     };
 
@@ -390,4 +385,85 @@ pub fn unregister_native_hotkey(state: State<'_, AppState>) -> Result<(), String
         *handle = None; // Drop stops the CGEventTap
     }
     Ok(())
+}
+
+/// Helper function for text-only polishing (used as fallback when vision fails)
+fn polish_text_only(
+    text: &str,
+    detected_lang: &str,
+    polish_enabled: bool,
+    polish_mode: &str,
+    polish_prompt: &str,
+    api_endpoint: &str,
+    api_key: &str,
+    api_model: &str,
+    state: &State<'_, AppState>,
+) -> String {
+    if !polish_enabled {
+        return text.to_string();
+    }
+
+    match polish_mode {
+        "local" => {
+            // Local GGUF model polishing
+            if let Some(ref engine_mutex) = state.polishing_engine {
+                match engine_mutex.lock() {
+                    Ok(engine) => {
+                        println!("[polish:local] '{}' (lang={})", text, detected_lang);
+                        let start = std::time::Instant::now();
+                        let custom = if polish_prompt.is_empty() { None } else { Some(polish_prompt) };
+                        let lang_ref = if detected_lang.is_empty() { None } else { Some(detected_lang) };
+                        match engine.polish(text, custom, lang_ref) {
+                            Ok(result) => {
+                                println!("[polish:local] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
+                                result
+                            }
+                            Err(e) => {
+                                println!("[polish:local] ERROR: {}, using original", e);
+                                text.to_string()
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("[polish:local] lock error: {}, using original", e);
+                        text.to_string()
+                    }
+                }
+            } else {
+                println!("[polish:local] engine not loaded, skipping");
+                text.to_string()
+            }
+        }
+        "api" => {
+            // Online API polishing (OpenAI-compatible)
+            if api_endpoint.is_empty() || api_key.is_empty() || api_model.is_empty() {
+                println!("[polish:api] API not configured (endpoint/key/model empty), skipping");
+                text.to_string()
+            } else {
+                let lang = if detected_lang.is_empty() { "auto" } else { detected_lang };
+                let prompt = if polish_prompt.is_empty() {
+                    crate::config::DEFAULT_POLISH_PROMPT.to_string()
+                } else {
+                    polish_prompt.to_string()
+                };
+                println!("[polish:api] '{}' (lang={}) via {}", text, lang, api_model);
+                let start = std::time::Instant::now();
+                let polisher = OnlinePolisher::new(api_endpoint, api_key, api_model);
+                match polisher.polish(text, &prompt, lang, None) {
+                    Ok(result) => {
+                        println!("[polish:api] result: '{}' ({:.1}s)", result, start.elapsed().as_secs_f64());
+                        result
+                    }
+                    Err(e) => {
+                        println!("[polish:api] ERROR: {}, using original", e);
+                        text.to_string()
+                    }
+                }
+            }
+        }
+        _ => {
+            println!("[polish] unknown mode '{}', skipping", polish_mode);
+            text.to_string()
+        }
+    }
 }

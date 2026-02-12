@@ -95,6 +95,35 @@
         <textarea id="polish-prompt" rows="8"></textarea>
       </section>
 
+      <!-- Vision Model -->
+      <section class="field">
+        <label>Vision Model / 视觉模型</label>
+        <p class="hint">Use local vision model (MiniCPM-V/Qwen2-VL) to understand screenshots</p>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="vision-mode" value="disabled" checked />
+            <span>Disabled / 关闭</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="vision-mode" value="local" />
+            <span>Local Model / 本地模型 ⭐</span>
+          </label>
+        </div>
+        <p id="vision-hint" class="hint" style="margin-top: 8px; color: #666;">
+          <!-- Dynamic hint text -->
+        </p>
+      </section>
+
+      <!-- Vision Model Path (shown when vision mode is enabled) -->
+      <section id="vision-model-section" class="field hidden">
+        <label for="vision-model-path">Vision Model Path / 视觉模型路径</label>
+        <p class="hint">Path to MiniCPM-V or Qwen2-VL model directory</p>
+        <div class="path-row">
+          <input type="text" id="vision-model-path" class="path-input" placeholder="~/.openclaw/models/minicpm-v-2_6/" />
+          <button id="browse-vision-btn" class="btn-small">Browse...</button>
+        </div>
+      </section>
+
       <!-- Screenshot Context -->
       <section class="field">
         <label>Screenshot Context / 截图上下文</label>

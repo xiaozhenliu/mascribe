@@ -44,6 +44,12 @@ pub struct AppConfig {
     pub screenshot_mode: String,
     /// Max screenshot dimension for resizing (0 = no limit)
     pub screenshot_max_size: u32,
+    /// Vision model path for local multimodal processing (MiniCPM-V or Qwen2-VL)
+    pub vision_model_path: String,
+    /// Vision mode: "disabled" | "local" | "api"
+    pub vision_mode: String,
+    /// Max image dimension for vision model (0 = no limit)
+    pub vision_max_image_size: u32,
 }
 
 impl Default for AppConfig {
@@ -79,6 +85,12 @@ impl Default for AppConfig {
             api_model: String::new(),
             screenshot_mode: "disabled".to_string(),
             screenshot_max_size: 1024,
+            vision_model_path: home
+                .join(".openclaw/models/minicpm-v-2_6")
+                .to_string_lossy()
+                .to_string(),
+            vision_mode: "disabled".to_string(),
+            vision_max_image_size: 448,
         }
     }
 }
