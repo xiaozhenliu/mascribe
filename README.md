@@ -14,7 +14,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 - **Fast** — ~50ms to transcribe 5 seconds of audio on Apple Silicon
 - **Private** — Everything runs locally, no network required
 - **AI polishing (dual-engine)** — Local Qwen 2.5 model or any OpenAI-compatible API for punctuation, grammar, and homophone correction
-- **Screen OCR context** — Captures screenshot and extracts text via native macOS Vision framework (fast, zero setup) or Ollama GLM-OCR; injects screen text into the polishing prompt for accurate homophone correction
+- **Screen OCR context** — Captures screenshot and extracts text via native OS OCR (macOS Vision framework / Windows.Media.Ocr) or Ollama GLM-OCR; injects screen text into the polishing prompt for accurate homophone correction
 - **Mixed-language friendly** — Preserves Chinese-English code-switching as spoken
 - **Universal paste** — Works in any macOS app (Chrome, VS Code, WeChat, etc.)
 - **Configurable hotkey** — Set any key or combo; supports special keys like ContextMenu via presets
@@ -28,7 +28,7 @@ Powered by [SenseVoice](https://github.com/FunAudioLLM/SenseVoice) (Alibaba) run
 - **快速** — Apple Silicon 上 5 秒音频仅需约 50ms 转写
 - **隐私** — 完全本地运行，无需网络
 - **AI 润色（双引擎）** — 本地 Qwen 2.5 模型或在线 OpenAI 兼容 API，自动修正标点、语法和同音字
-- **屏幕 OCR 上下文** — 截取当前窗口，通过 macOS 原生 Vision 框架（快速、无需配置）或 Ollama GLM-OCR 提取屏幕文字，注入润色提示词中，精准纠正同音字
+- **屏幕 OCR 上下文** — 截取当前窗口，通过系统原生 OCR（macOS Vision 框架 / Windows.Media.Ocr）或 Ollama GLM-OCR 提取屏幕文字，注入润色提示词中，精准纠正同音字
 - **中英混合友好** — 保留说话时的中英混杂，不自动翻译
 - **通用粘贴** — 适用于任何 macOS 应用
 - **自定义快捷键** — 支持任意单键或组合键，特殊键（如 ContextMenu）可通过预设选择
@@ -177,7 +177,7 @@ The built app will be in `src-tauri/target/release/bundle/macos/`.
 | Speech Model | SenseVoice via sherpa-rs |
 | AI Polishing (local) | Qwen 2.5 1.5B Instruct via llama-cpp-2 |
 | AI Polishing (online) | OpenAI-compatible API via ureq |
-| Screen OCR | macOS Vision framework (native) or GLM-OCR via Ollama |
+| Screen OCR | Native OS OCR (macOS Vision / Windows.Media.Ocr) or GLM-OCR via Ollama |
 | Audio | cpal (CoreAudio) |
 | Hotkey | CGEventTap (native) + tauri-plugin-global-shortcut |
 | Text Insertion | Clipboard + CGEvent Cmd+V |

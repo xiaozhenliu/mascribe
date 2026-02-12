@@ -5,7 +5,7 @@ All notable changes to Voice Input are documented here.
 ## Unreleased
 
 ### Added
-- **Native macOS Vision OCR** — Uses `VNRecognizeTextRequest` via Apple's Neural Engine for screen text recognition; ~0.6s vs 5–7s with Ollama GLM-OCR (10x speedup). No external dependencies required — zero setup on macOS
+- **Native cross-platform OCR** — macOS: `VNRecognizeTextRequest` via Neural Engine (~0.6s); Windows: `Windows.Media.Ocr` WinRT API (~50-200ms, same engine as PowerToys Text Extractor). Both handle mixed Chinese/English/code text natively. Zero external dependencies
 - **Screen OCR context** — Two-step pipeline: screenshot → OCR extracts screen text → injected into AI polishing prompt for homophone correction (e.g., "把" vs "八")
 - **OCR settings** — Three modes: "macOS Built-in" (native, recommended), "Ollama OCR" (GLM-OCR), or "Disabled"
 - **Launch at Login** — "Launch at Login" checkbox in tray menu via `tauri-plugin-autostart` (macOS Login Items)

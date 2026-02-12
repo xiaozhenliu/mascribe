@@ -13,7 +13,7 @@ macOS 语音输入工具 — 按住快捷键说话，本地转写后自动输入
 - **Serialization**: serde + serde_json
 - **AI Polishing (local)**: Qwen 2.5 1.5B Instruct (GGUF) via llama-cpp-2 crate
 - **AI Polishing (online)**: OpenAI-compatible chat completions API via ureq (sync HTTP)
-- **Screen OCR**: macOS Vision framework (native, ~0.6s) or GLM-OCR via Ollama (fallback)
+- **Screen OCR**: Native OS OCR (macOS Vision ~0.6s / Windows.Media.Ocr ~50-200ms) or GLM-OCR via Ollama (fallback)
 
 ## Key Paths
 
@@ -98,7 +98,8 @@ transcribe → corrections → polish(mode) + screen context → insert
   2. Screen text injected into polish prompt with `[SCREEN CONTEXT]` labels (clearly separated from `[TRANSCRIPT]`)
   3. Polishing model uses screen context to correct homophones (e.g., "把" vs "八")
   - **OCR modes**: `vision_mode` = "native" (macOS Vision, ~0.6s), "api" (Ollama, ~5-7s), or "disabled"
-  - **Native OCR** uses objc2 `msg_send!` to call Vision framework, supports zh-Hans/zh-Hant/en-US/ja-JP/ko-KR
+  - **Native OCR**: macOS uses objc2 `msg_send!` for Vision framework; Windows uses `Windows.Media.Ocr` WinRT via `windows` crate
+  - Both support zh-Hans/zh-Hant/en-US/ja-JP/ko-KR (zh-Hans engine handles mixed CJK+ASCII natively)
   - **OCR context only injected for online API mode** — local Qwen 2.5 1.5B has ~512 token batch limit, too small for extra context
   - **Output validation**: rejects API output > 3× input length + 20 chars (prevents OCR content leakage)
   - OCR text truncated to 500 chars to keep prompt reasonable

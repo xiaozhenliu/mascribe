@@ -252,6 +252,17 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
    - 下载 Qwen 2.5 1.5B GGUF 模型
    - 放到 `%USERPROFILE%\.openclaw\models\qwen2.5-1.5b\`
 
+4. **（可选）安装 OCR 语言包（屏幕 OCR 上下文功能）**：
+   - 应用使用 Windows 原生 OCR (`Windows.Media.Ocr`) 提取屏幕文字作为 AI 润色上下文
+   - 英文 OCR 通常已预装
+   - 中文简体 OCR 需手动安装：
+     ```powershell
+     # PowerShell (管理员)
+     Add-WindowsCapability -Online -Name Language.OCR~~~zh-Hans~0.0.1.0
+     ```
+   - 或在 `Settings → Language & Region` 中添加中文语言包
+   - 中文 OCR 引擎天然支持中英文混合识别（代码、注释、网页等）
+
 ---
 
 ## 热键配置说明
