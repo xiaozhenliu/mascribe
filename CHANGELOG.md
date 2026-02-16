@@ -4,6 +4,13 @@ All notable changes to MaScribe are documented here.
 
 ## Unreleased
 
+## 0.3.1 - 2026-02-16
+
+### Changed
+- Model storage switched to macOS-native app data path: `~/Library/Application Support/com.mascribe/models`.
+- Removed release-side legacy OpenClaw model-path migration logic to keep first public package behavior explicit.
+- Updated model install script and guides to use the native path and executable copy-paste commands for DMG users.
+
 ## 0.3.0 - 2026-02-16
 
 ### Added
