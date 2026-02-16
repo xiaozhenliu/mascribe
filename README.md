@@ -39,15 +39,6 @@ MaScribe 是一个本地语音输入工具（macOS / Windows）。
 tccutil reset Accessibility com.mascribe
 ```
 
-### 2) 换了新版本后配置不见了
-
-品牌从旧版迁移到 `MaScribe` 后，配置目录为：
-
-- 新版：`~/Library/Application Support/com.mascribe/`
-- 旧版：`~/Library/Application Support/com.mac-voice-input/`
-
-如果你有旧数据，先迁移再删除旧目录。
-
 ## 配置与文档
 
 详细文档请看 `docs/`：
