@@ -9,15 +9,18 @@
   </head>
   <body>
     <header class="settings-header">
-      <h1>Settings</h1>
+      <h1 id="page-title">Settings</h1>
+      <select id="language-select" class="btn-small" aria-label="Language">
+        <option value="en">English</option>
+        <option value="zh">中文</option>
+      </select>
     </header>
     <div class="settings-scroll">
     <div class="settings-container">
 
-      <!-- Shortcut -->
       <section class="field">
-        <label for="shortcut">Global Shortcut</label>
-        <p class="hint">Click the box below and press your desired key combination</p>
+        <label id="label-shortcut" for="shortcut">Global Shortcut</label>
+        <p id="hint-shortcut" class="hint">Click the box below and press your desired key combination</p>
         <div class="shortcut-row">
           <input
             type="text"
@@ -27,8 +30,8 @@
             placeholder="Click and press keys..."
           />
           <select id="shortcut-presets" class="btn-small" title="Special keys">
-            <option value="" disabled selected>Presets ▾</option>
-            <option value="ContextMenu">☰ Menu Key</option>
+            <option id="preset-title" value="" disabled selected>Presets ▾</option>
+            <option id="preset-contextmenu" value="ContextMenu">☰ Menu Key</option>
             <option value="F13">F13</option>
             <option value="F14">F14</option>
             <option value="F15">F15</option>
@@ -37,141 +40,126 @@
         </div>
       </section>
 
-      <!-- Recordings directory -->
       <section class="field">
-        <label for="recordings-dir">Recordings Directory</label>
-        <p class="hint">Where WAV recordings of each speech input are saved</p>
+        <label id="label-recordings" for="recordings-dir">Recordings Directory</label>
+        <p id="hint-recordings" class="hint">Where WAV recordings of each speech input are saved</p>
         <div class="path-row">
           <input type="text" id="recordings-dir" class="path-input" />
           <button id="browse-btn" class="btn-small">Browse...</button>
         </div>
       </section>
 
-      <!-- AI Polishing Engine -->
       <section class="field">
-        <label>AI Polishing Engine</label>
-        <p class="hint">Choose how transcribed text is polished after speech recognition</p>
+        <label id="label-polish">AI Polishing Engine</label>
+        <p id="hint-polish" class="hint">Choose how transcribed text is polished after speech recognition</p>
         <div class="radio-group">
           <label class="radio-label">
             <input type="radio" name="polish-mode" value="disabled" />
-            <span>Off</span>
+            <span id="polish-off">Off</span>
           </label>
           <label class="radio-label">
             <input type="radio" name="polish-mode" value="local" />
-            <span>Local Model</span>
+            <span id="polish-local">Local Model</span>
           </label>
           <label class="radio-label">
             <input type="radio" name="polish-mode" value="api" />
-            <span>Online API</span>
+            <span id="polish-api">Online API</span>
           </label>
         </div>
       </section>
 
-      <!-- Online API settings (shown only when "api" is selected) -->
       <section id="api-settings" class="field api-settings hidden">
-        <label>Online API Settings</label>
-        <p class="hint">OpenAI-compatible endpoint. Setup guide: <code>docs/online-api-guide-en.md</code> | <code>online-api-guide-zh.md</code></p>
+        <label id="label-api-settings">Online API Settings</label>
+        <p id="hint-api-settings" class="hint">OpenAI-compatible endpoint. Setup guide: docs/online-api-guide-en.md | docs/online-api-guide-zh.md</p>
         <div class="api-field">
-          <span class="api-label">Endpoint</span>
+          <span id="api-endpoint-label" class="api-label">Endpoint</span>
           <input type="text" id="api-endpoint" placeholder="https://api.stepfun.com/v1" />
         </div>
         <div class="api-field">
-          <span class="api-label">API Key</span>
+          <span id="api-key-label" class="api-label">API Key</span>
           <input type="password" id="api-key" placeholder="sk-..." />
         </div>
         <div class="api-field">
-          <span class="api-label">Model</span>
+          <span id="api-model-label" class="api-label">Model</span>
           <input type="text" id="api-model" placeholder="step-1-flash" />
         </div>
       </section>
 
-      <!-- Polish prompt -->
       <section id="polish-prompt-section" class="field hidden">
-        <label for="polish-prompt">AI Polish Prompt</label>
-        <p class="hint">
-          Template for text post-processing.
-          Use <code>{text}</code> for transcribed text and <code>{lang}</code> for detected language.
+        <label id="label-polish-prompt" for="polish-prompt">AI Polish Prompt</label>
+        <p id="hint-polish-prompt" class="hint">
+          Template for text post-processing. Use {text} for transcribed text and {lang} for detected language.
         </p>
         <textarea id="polish-prompt" rows="8"></textarea>
       </section>
 
-      <!-- Screen OCR -->
       <section class="field">
-        <label>Screen OCR / 屏幕文字识别</label>
-        <p class="hint">OCR extracts text from screenshots, then AI polishing uses it as context to correct homophones</p>
+        <label id="label-ocr">Screen OCR</label>
+        <p id="hint-ocr" class="hint">OCR extracts text from screenshots, then AI polishing uses it as context to correct homophones</p>
         <div class="radio-group">
           <label class="radio-label">
             <input type="radio" name="vision-mode" value="disabled" checked />
-            <span>Disabled / 关闭</span>
+            <span id="vision-disabled">Disabled</span>
           </label>
           <label class="radio-label">
             <input type="radio" name="vision-mode" value="native" />
-            <span id="vision-native-label">Native Built-in / 系统内置 ⭐</span>
+            <span id="vision-native-label">Native Built-in ⭐</span>
           </label>
           <label class="radio-label">
             <input type="radio" name="vision-mode" value="api" />
-            <span>Ollama OCR</span>
+            <span id="vision-api">Ollama OCR</span>
           </label>
         </div>
-        <p id="vision-hint" class="hint" style="margin-top: 8px; color: #666;">
-          <!-- Dynamic hint text -->
-        </p>
+        <p id="vision-hint" class="hint" style="margin-top: 8px; color: #666;"></p>
       </section>
 
-      <!-- OCR API settings (shown when OCR is enabled) -->
       <section id="ocr-settings" class="field hidden">
-        <label>OCR Settings / OCR 设置</label>
-        <p class="hint">Ollama + GLM-OCR recommended. Install: <code>ollama pull glm-ocr</code></p>
+        <label id="label-ocr-settings">OCR Settings</label>
+        <p id="hint-ocr-settings" class="hint">Ollama + GLM-OCR recommended. Install: ollama pull glm-ocr</p>
         <div class="api-field">
-          <span class="api-label">Endpoint</span>
+          <span id="ocr-endpoint-label" class="api-label">Endpoint</span>
           <input type="text" id="ocr-endpoint" placeholder="http://localhost:11434/v1" />
         </div>
         <div class="api-field">
-          <span class="api-label">Model</span>
+          <span id="ocr-model-label" class="api-label">Model</span>
           <input type="text" id="ocr-model" placeholder="glm-ocr" />
         </div>
       </section>
 
-      <!-- Screenshot Context -->
       <section class="field">
-        <label>Screenshot Context / 截图上下文</label>
-        <p class="hint">Capture current window to provide visual context for AI</p>
+        <label id="label-screenshot">Screenshot Context</label>
+        <p id="hint-screenshot" class="hint">Capture current window to provide visual context for AI</p>
         <div class="radio-group">
           <label class="radio-label">
             <input type="radio" name="screenshot-mode" value="disabled" checked />
-            <span>Disabled / 关闭</span>
+            <span id="screenshot-disabled">Disabled</span>
           </label>
           <label class="radio-label">
             <input type="radio" name="screenshot-mode" value="save" />
-            <span>Save Only / 仅保存</span>
+            <span id="screenshot-save">Save Only</span>
           </label>
           <label class="radio-label">
             <input type="radio" name="screenshot-mode" value="api" />
-            <span>Send to API / 发送到 API</span>
+            <span id="screenshot-api">Send to API</span>
           </label>
         </div>
-        <p id="screenshot-hint" class="hint" style="margin-top: 8px; color: #666;">
-          <!-- Dynamic hint text -->
-        </p>
+        <p id="screenshot-hint" class="hint" style="margin-top: 8px; color: #666;"></p>
       </section>
 
-      <!-- Correction Dictionary -->
       <section class="field">
-        <label>Correction Dictionary / 纠错词典</label>
-        <p class="hint">
+        <label id="label-corrections">Correction Dictionary</label>
+        <p id="hint-corrections" class="hint">
           Auto-replace words after transcription (case-insensitive).
-          识别后自动替换文字，不区分大小写。
         </p>
         <div class="corrections-add">
-          <input type="text" id="correction-from" placeholder="From / 原文" />
+          <input type="text" id="correction-from" placeholder="From" />
           <span class="corrections-arrow">→</span>
-          <input type="text" id="correction-to" placeholder="To / 替换为" />
+          <input type="text" id="correction-to" placeholder="To" />
           <button id="correction-add-btn" class="btn-small">Add</button>
         </div>
         <div id="corrections-list" class="corrections-list"></div>
       </section>
 
-      <!-- Actions -->
       <div class="actions">
         <button id="btn-save" class="btn primary">Save</button>
       </div>

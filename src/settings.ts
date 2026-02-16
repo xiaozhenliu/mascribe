@@ -27,6 +27,7 @@ interface AppConfig {
 }
 
 type AppPlatform = "macos" | "windows" | "linux" | "unknown";
+type UiLang = "en" | "zh";
 
 // ── DOM refs ──
 const shortcutInput = () => document.getElementById("shortcut") as HTMLInputElement;
@@ -46,9 +47,204 @@ const visionNativeLabel = () => document.getElementById("vision-native-label") a
 const ocrSettings = () => document.getElementById("ocr-settings") as HTMLElement;
 const ocrEndpoint = () => document.getElementById("ocr-endpoint") as HTMLInputElement;
 const ocrModel = () => document.getElementById("ocr-model") as HTMLInputElement;
+const languageSelect = () => document.getElementById("language-select") as HTMLSelectElement;
 const btnSave = () => document.getElementById("btn-save") as HTMLButtonElement;
 let originalConfig: AppConfig | null = null;
 let currentPlatform: AppPlatform = "unknown";
+let currentUiLang: UiLang = "en";
+
+const I18N: Record<UiLang, Record<string, string>> = {
+  en: {
+    page_title: "Settings",
+    page_doc_title: "MaScribe Settings",
+    shortcut_label: "Global Shortcut",
+    shortcut_hint: "Click the box below and press your desired key combination",
+    shortcut_placeholder: "Click and press keys...",
+    shortcut_presets: "Presets ▾",
+    shortcut_menu_key: "☰ Menu Key",
+    shortcut_reset: "Reset",
+    shortcut_reset_title: "Reset to default",
+    shortcut_special_title: "Special keys",
+    recordings_label: "Recordings Directory",
+    recordings_hint: "Where WAV recordings of each speech input are saved",
+    browse: "Browse...",
+    polish_label: "AI Polishing Engine",
+    polish_hint: "Choose how transcribed text is polished after speech recognition",
+    polish_off: "Off",
+    polish_local: "Local Model",
+    polish_api: "Online API",
+    api_settings_label: "Online API Settings",
+    api_settings_hint: "OpenAI-compatible endpoint. Setup guide: docs/online-api-guide-en.md | docs/online-api-guide-zh.md",
+    endpoint: "Endpoint",
+    api_key: "API Key",
+    model: "Model",
+    polish_prompt_label: "AI Polish Prompt",
+    polish_prompt_hint: "Template for text post-processing. Use {text} for transcribed text and {lang} for detected language.",
+    ocr_label: "Screen OCR",
+    ocr_hint: "OCR extracts text from screenshots, then AI polishing uses it as context to correct homophones",
+    disabled: "Disabled",
+    ollama_ocr: "Ollama OCR",
+    ocr_settings_label: "OCR Settings",
+    ocr_settings_hint: "Ollama + GLM-OCR recommended. Install: ollama pull glm-ocr",
+    screenshot_label: "Screenshot Context",
+    screenshot_hint: "Capture current window to provide visual context for AI",
+    screenshot_save: "Save Only",
+    screenshot_api: "Send to API",
+    corrections_label: "Correction Dictionary",
+    corrections_hint: "Auto-replace words after transcription (case-insensitive).",
+    correction_from: "From",
+    correction_to: "To",
+    correction_add: "Add",
+    save: "Save",
+    press_keys: "Press keys...",
+    no_rules: "No rules yet",
+    delete: "Delete",
+    load_failed: "Failed to load settings",
+    save_ok: "Settings saved",
+    save_failed: "Save failed",
+    screenshot_saved_macos: "Screenshots will be saved to ~/Library/Application Support/com.mascribe/screenshots/",
+    screenshot_saved_windows: "Screenshots will be saved to %APPDATA%/com.mascribe/screenshots/",
+    screenshot_saved_other: "Screenshots will be saved to the app data screenshots folder.",
+    screenshot_ocr_injected: "✓ Screenshot → OCR → screen context injected into AI polishing prompt for homophone correction.",
+    screenshot_polish_off: "AI Polishing is disabled. Enable polishing + OCR to use screenshots for correction.",
+    screenshot_need_ocr: "Enable Screen OCR above to use screenshots for context-aware correction.",
+    native_macos: "macOS Built-in ⭐",
+    native_windows: "Windows Built-in ⭐",
+    native_other: "Native Built-in ⭐",
+    vision_native_macos_hint: "Using macOS built-in text recognition (fast, no setup required)",
+    vision_native_windows_hint: "Using Windows built-in text recognition (fast; install OCR language pack if needed)",
+    vision_native_other_hint: "Using built-in system text recognition",
+    vision_api_hint: "Using Ollama OCR model (requires Ollama running locally)",
+  },
+  zh: {
+    page_title: "设置",
+    page_doc_title: "MaScribe 设置",
+    shortcut_label: "全局快捷键",
+    shortcut_hint: "点击输入框后按下你想要的按键组合",
+    shortcut_placeholder: "点击后按键...",
+    shortcut_presets: "预设 ▾",
+    shortcut_menu_key: "☰ 菜单键",
+    shortcut_reset: "重置",
+    shortcut_reset_title: "恢复默认值",
+    shortcut_special_title: "特殊按键",
+    recordings_label: "录音目录",
+    recordings_hint: "每次语音输入生成的 WAV 文件保存位置",
+    browse: "浏览...",
+    polish_label: "AI 润色引擎",
+    polish_hint: "选择语音识别后文本的润色方式",
+    polish_off: "关闭",
+    polish_local: "本地模型",
+    polish_api: "在线 API",
+    api_settings_label: "在线 API 设置",
+    api_settings_hint: "OpenAI 兼容接口。配置指南：docs/online-api-guide-zh.md | docs/online-api-guide-en.md",
+    endpoint: "接口地址",
+    api_key: "API 密钥",
+    model: "模型",
+    polish_prompt_label: "AI 润色提示词",
+    polish_prompt_hint: "文本后处理模板。使用 {text} 表示转写文本，使用 {lang} 表示识别语言。",
+    ocr_label: "屏幕 OCR",
+    ocr_hint: "OCR 会从截图提取文字，AI 润色会利用这些上下文纠正同音字",
+    disabled: "关闭",
+    ollama_ocr: "Ollama OCR",
+    ocr_settings_label: "OCR 设置",
+    ocr_settings_hint: "推荐 Ollama + GLM-OCR。安装命令：ollama pull glm-ocr",
+    screenshot_label: "截图上下文",
+    screenshot_hint: "截图当前窗口，为 AI 提供视觉上下文",
+    screenshot_save: "仅保存",
+    screenshot_api: "发送到 API",
+    corrections_label: "纠错词典",
+    corrections_hint: "识别后自动替换词语（不区分大小写）。",
+    correction_from: "原文",
+    correction_to: "替换为",
+    correction_add: "添加",
+    save: "保存",
+    press_keys: "请按键...",
+    no_rules: "暂无规则",
+    delete: "删除",
+    load_failed: "加载设置失败",
+    save_ok: "设置已保存",
+    save_failed: "保存失败",
+    screenshot_saved_macos: "截图将保存到 ~/Library/Application Support/com.mascribe/screenshots/",
+    screenshot_saved_windows: "截图将保存到 %APPDATA%/com.mascribe/screenshots/",
+    screenshot_saved_other: "截图将保存到应用数据目录中的 screenshots 文件夹。",
+    screenshot_ocr_injected: "✓ 截图 → OCR → 屏幕文字已注入 AI 润色提示词用于同音字纠错。",
+    screenshot_polish_off: "AI 润色已关闭。请启用“润色 + OCR”后再使用截图纠错。",
+    screenshot_need_ocr: "请先在上方启用屏幕 OCR，再使用截图上下文纠错。",
+    native_macos: "macOS 系统内置 ⭐",
+    native_windows: "Windows 系统内置 ⭐",
+    native_other: "系统内置 ⭐",
+    vision_native_macos_hint: "使用 macOS 系统内置文字识别（快速，无需额外配置）",
+    vision_native_windows_hint: "使用 Windows 系统内置文字识别（快速；若需中文请安装 OCR 语言包）",
+    vision_native_other_hint: "使用系统内置文字识别",
+    vision_api_hint: "使用 Ollama OCR 模型（需要本机启动 Ollama）",
+  },
+};
+
+function t(key: string): string {
+  return I18N[currentUiLang][key] || key;
+}
+
+function setText(id: string, key: string) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = t(key);
+}
+
+function setPlaceholder(id: string, key: string) {
+  const el = document.getElementById(id) as HTMLInputElement | null;
+  if (el) el.placeholder = t(key);
+}
+
+function applyLanguage() {
+  document.documentElement.lang = currentUiLang === "zh" ? "zh-CN" : "en";
+  document.title = t("page_doc_title");
+  setText("page-title", "page_title");
+  setText("label-shortcut", "shortcut_label");
+  setText("hint-shortcut", "shortcut_hint");
+  setPlaceholder("shortcut", "shortcut_placeholder");
+  setText("preset-title", "shortcut_presets");
+  setText("preset-contextmenu", "shortcut_menu_key");
+  setText("shortcut-clear", "shortcut_reset");
+  shortcutClear().title = t("shortcut_reset_title");
+  shortcutPresets().title = t("shortcut_special_title");
+  setText("label-recordings", "recordings_label");
+  setText("hint-recordings", "recordings_hint");
+  setText("browse-btn", "browse");
+  setText("label-polish", "polish_label");
+  setText("hint-polish", "polish_hint");
+  setText("polish-off", "polish_off");
+  setText("polish-local", "polish_local");
+  setText("polish-api", "polish_api");
+  setText("label-api-settings", "api_settings_label");
+  setText("hint-api-settings", "api_settings_hint");
+  setText("api-endpoint-label", "endpoint");
+  setText("api-key-label", "api_key");
+  setText("api-model-label", "model");
+  setText("label-polish-prompt", "polish_prompt_label");
+  setText("hint-polish-prompt", "polish_prompt_hint");
+  setText("label-ocr", "ocr_label");
+  setText("hint-ocr", "ocr_hint");
+  setText("vision-disabled", "disabled");
+  setText("vision-api", "ollama_ocr");
+  setText("label-ocr-settings", "ocr_settings_label");
+  setText("hint-ocr-settings", "ocr_settings_hint");
+  setText("ocr-endpoint-label", "endpoint");
+  setText("ocr-model-label", "model");
+  setText("label-screenshot", "screenshot_label");
+  setText("hint-screenshot", "screenshot_hint");
+  setText("screenshot-disabled", "disabled");
+  setText("screenshot-save", "screenshot_save");
+  setText("screenshot-api", "screenshot_api");
+  setText("label-corrections", "corrections_label");
+  setText("hint-corrections", "corrections_hint");
+  setPlaceholder("correction-from", "correction_from");
+  setPlaceholder("correction-to", "correction_to");
+  setText("correction-add-btn", "correction_add");
+  setText("btn-save", "save");
+  updateVisionNativeLabel();
+  updateVisionVisibility();
+  updateScreenshotHint();
+  renderCorrections();
+}
 
 async function detectPlatform() {
   try {
@@ -63,14 +259,34 @@ async function detectPlatform() {
   currentPlatform = "unknown";
 }
 
+function detectUiLanguage() {
+  const saved = localStorage.getItem("settings_lang");
+  if (saved === "en" || saved === "zh") {
+    currentUiLang = saved;
+    return;
+  }
+  const navLang = (navigator.language || "en").toLowerCase();
+  currentUiLang = navLang.startsWith("zh") ? "zh" : "en";
+}
+
+function setupLanguageSelector() {
+  const select = languageSelect();
+  select.value = currentUiLang;
+  select.addEventListener("change", () => {
+    currentUiLang = select.value === "zh" ? "zh" : "en";
+    localStorage.setItem("settings_lang", currentUiLang);
+    applyLanguage();
+  });
+}
+
 function updateVisionNativeLabel() {
   const label = visionNativeLabel();
   if (currentPlatform === "windows") {
-    label.textContent = "Windows Built-in / 系统内置 ⭐";
+    label.textContent = t("native_windows");
   } else if (currentPlatform === "macos") {
-    label.textContent = "macOS Built-in / 系统内置 ⭐";
+    label.textContent = t("native_macos");
   } else {
-    label.textContent = "Native Built-in / 系统内置 ⭐";
+    label.textContent = t("native_other");
   }
 }
 
@@ -114,14 +330,14 @@ function setupShortcutRecorder() {
   input.addEventListener("focus", () => {
     isListening = true;
     input.classList.add("recording");
-    input.value = "Press keys...";
+    input.value = t("press_keys");
   });
 
   input.addEventListener("blur", () => {
     isListening = false;
     input.classList.remove("recording");
     // If value is still the placeholder, restore original
-    if (input.value === "Press keys..." && originalConfig) {
+    if (input.value === t("press_keys") && originalConfig) {
       input.value = originalConfig.shortcut;
     }
   });
@@ -283,19 +499,19 @@ function updateScreenshotHint() {
     hint.textContent = "";
   } else if (screenshotMode === "save") {
     if (currentPlatform === "windows") {
-      hint.textContent = "Screenshots will be saved to %APPDATA%/com.mascribe/screenshots/";
+      hint.textContent = t("screenshot_saved_windows");
     } else if (currentPlatform === "macos") {
-      hint.textContent = "Screenshots will be saved to ~/Library/Application Support/com.mascribe/screenshots/";
+      hint.textContent = t("screenshot_saved_macos");
     } else {
-      hint.textContent = "Screenshots will be saved to the app data screenshots folder.";
+      hint.textContent = t("screenshot_saved_other");
     }
   } else if (screenshotMode === "api") {
     if (visionMode !== "disabled") {
-      hint.textContent = "✓ Screenshot → OCR → screen context injected into AI polishing prompt for homophone correction.";
+      hint.textContent = t("screenshot_ocr_injected");
     } else if (!polishEnabled) {
-      hint.textContent = "⚠️ AI Polishing is disabled. Enable polishing + OCR to use screenshots for correction.";
+      hint.textContent = t("screenshot_polish_off");
     } else {
-      hint.textContent = "⚠️ Enable Screen OCR above to use screenshots for context-aware correction.";
+      hint.textContent = t("screenshot_need_ocr");
     }
   }
 }
@@ -341,16 +557,16 @@ function updateVisionVisibility() {
   } else if (mode === "native") {
     ocr.classList.add("hidden");
     if (currentPlatform === "windows") {
-      hint.textContent = "Using Windows built-in text recognition (fast; install OCR language pack if needed)";
+      hint.textContent = t("vision_native_windows_hint");
     } else if (currentPlatform === "macos") {
-      hint.textContent = "Using macOS built-in text recognition (fast, no setup required)";
+      hint.textContent = t("vision_native_macos_hint");
     } else {
-      hint.textContent = "Using built-in system text recognition";
+      hint.textContent = t("vision_native_other_hint");
     }
   } else {
     // Ollama API OCR — show endpoint/model config
     ocr.classList.remove("hidden");
-    hint.textContent = "Using Ollama OCR model (requires Ollama running locally)";
+    hint.textContent = t("vision_api_hint");
   }
 }
 
@@ -386,7 +602,7 @@ function renderCorrections() {
   if (corrections.length === 0) {
     const empty = document.createElement("p");
     empty.className = "corrections-empty";
-    empty.textContent = "No rules yet / 暂无规则";
+    empty.textContent = t("no_rules");
     list.appendChild(empty);
     return;
   }
@@ -411,7 +627,7 @@ function renderCorrections() {
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "correction-delete";
     deleteBtn.textContent = "✕";
-    deleteBtn.title = "Delete";
+    deleteBtn.title = t("delete");
     deleteBtn.addEventListener("click", () => {
       corrections.splice(i, 1);
       renderCorrections();
@@ -494,7 +710,7 @@ async function loadConfig() {
     ocrModel().value = config.ocr_model || "glm-ocr";
   } catch (e) {
     console.error("Failed to load config:", e);
-    showToast("Failed to load settings", "error");
+    showToast(t("load_failed"), "error");
   }
 }
 
@@ -527,7 +743,7 @@ async function saveConfig() {
   try {
     await invoke("save_config", { config: updated });
     await invoke("save_corrections", { entries: corrections });
-    showToast("Settings saved", "success");
+    showToast(t("save_ok"), "success");
     // Close window after brief delay
     setTimeout(async () => {
       const win = getCurrentWindow();
@@ -535,15 +751,17 @@ async function saveConfig() {
     }, 500);
   } catch (e) {
     console.error("Failed to save config:", e);
-    showToast(`Save failed: ${e}`, "error");
+    showToast(`${t("save_failed")}: ${e}`, "error");
   }
 }
 
 // ── Init ──
 
 window.addEventListener("DOMContentLoaded", async () => {
+  detectUiLanguage();
+  setupLanguageSelector();
   await detectPlatform();
-  updateVisionNativeLabel();
+  applyLanguage();
   setupPolishRadios();
   setupScreenshotRadios();
   setupVisionRadios();
