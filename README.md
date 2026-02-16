@@ -8,6 +8,8 @@
 
 MaScribe 是一个本地语音输入工具。按下快捷键说话，结束后自动把文本输入到当前光标位置。
 
+当前发布版本：`v0.3.2`
+
 ## 功能概览
 
 - 一键语音输入（默认快捷键 `Alt+Space`）
@@ -71,6 +73,25 @@ ls "$HOME/Library/Application Support/com.mascribe/models/sensevoice/sherpa-onnx
 2. 按 `Alt+Space` 开始录音
 3. 再按一次停止
 4. 文本自动插入当前输入位置
+
+## AI 润色配置说明
+
+### 本地模型模式（Local Model）
+
+- 本地模式使用 `llama.cpp`，需要填写 **GGUF 文件路径**
+- 推荐模型：`Qwen2.5-1.5B-Instruct`（GGUF）
+- 在设置中：
+  - `AI Polishing Engine -> Local Model`
+  - 在 `Local Model Settings` 里填写或浏览选择 `*.gguf`
+
+### Ollama 模式（适配不同机器，推荐）
+
+如果你机器上模型由 Ollama 管理，建议使用 `Online API` 模式：
+
+1. `AI Polishing Engine -> Online API`
+2. `Endpoint` 填 `http://localhost:11434/v1`
+3. 点击 `Detect Ollama Models` 自动识别本机已安装模型
+4. 从 `Model` 下拉建议中选择（如 `qwen2.5:1.5b`）
 
 ## 常见问题
 

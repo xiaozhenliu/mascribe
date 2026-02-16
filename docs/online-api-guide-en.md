@@ -17,6 +17,21 @@ Model:    deepseek-chat
 
 ---
 
+## Ollama Local Models (Recommended for local setups)
+
+If your local models are managed by Ollama, use this flow:
+
+1. Select `AI Polishing Engine -> Online API`
+2. Set `Endpoint: http://localhost:11434/v1`
+3. Click `Detect Ollama Models` to discover local models automatically
+4. Choose a detected model in `Model` (for example `qwen2.5:1.5b`)
+
+Notes:
+- This is more robust across different machines than typing model names manually.
+- If you want to use a direct GGUF file path, switch to `Local Model` mode.
+
+---
+
 ## What Each Field Means
 
 | Field | Description | Example |
@@ -63,4 +78,3 @@ Any OpenAI-compatible endpoint should work. Common examples:
 - `{lang}`: detected language code
 
 Keep `{text}` in your prompt, otherwise the model receives no transcript input.
-

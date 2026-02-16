@@ -81,8 +81,27 @@
         </div>
         <div class="api-field">
           <span id="api-model-label" class="api-label">Model</span>
-          <input type="text" id="api-model" placeholder="deepseek-chat" />
+          <input type="text" id="api-model" list="api-model-suggestions" placeholder="deepseek-chat" />
+          <datalist id="api-model-suggestions"></datalist>
         </div>
+        <div class="api-field">
+          <button id="detect-ollama-models-btn" class="btn-small" type="button">Detect Ollama Models</button>
+        </div>
+        <p id="detect-ollama-models-hint" class="hint"></p>
+      </section>
+
+      <section id="local-polish-settings" class="field hidden">
+        <label id="label-local-polish-settings" for="polish-model-path">Local Model Settings</label>
+        <p id="hint-local-polish-settings" class="hint">
+          Local mode expects a GGUF file path. Recommended: Qwen2.5-1.5B-Instruct GGUF.
+        </p>
+        <div class="path-row">
+          <input type="text" id="polish-model-path" class="path-input" placeholder="/path/to/model.gguf" />
+          <button id="polish-model-browse-btn" class="btn-small">Browse...</button>
+        </div>
+        <p id="hint-local-polish-ollama" class="hint">
+          If you use Ollama default install, choose "Online API" mode with endpoint http://localhost:11434/v1 and model qwen2.5:1.5b.
+        </p>
       </section>
 
       <section id="polish-prompt-section" class="field hidden">

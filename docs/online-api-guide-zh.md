@@ -17,6 +17,21 @@ Model:    deepseek-chat
 
 ---
 
+## Ollama 本地模型（推荐给本地用户）
+
+如果你使用 Ollama 管理本地模型，建议这样配置：
+
+1. 在设置中选择 `AI Polishing Engine -> Online API`
+2. 填写 `Endpoint: http://localhost:11434/v1`
+3. 点击 `Detect Ollama Models` 自动识别本机模型
+4. 在 `Model` 中选择识别到的模型（如 `qwen2.5:1.5b`）
+
+说明：
+- 这比手动输入模型名更稳妥，适配不同机器上的模型列表差异。
+- 若你想使用 GGUF 本地文件路径，请切换到 `Local Model` 模式。
+
+---
+
 ## 三个字段怎么填
 
 | 字段 | 说明 | 示例 |
@@ -63,4 +78,3 @@ Model:    deepseek-chat
 - `{lang}`：识别语言代码
 
 请保留 `{text}`，否则模型拿不到需要润色的内容。
-

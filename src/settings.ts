@@ -35,11 +35,17 @@ const shortcutClear = () => document.getElementById("shortcut-clear") as HTMLBut
 const shortcutPresets = () => document.getElementById("shortcut-presets") as HTMLSelectElement;
 const recordingsDir = () => document.getElementById("recordings-dir") as HTMLInputElement;
 const browseBtn = () => document.getElementById("browse-btn") as HTMLButtonElement;
+const polishModelPath = () => document.getElementById("polish-model-path") as HTMLInputElement;
+const polishModelBrowseBtn = () => document.getElementById("polish-model-browse-btn") as HTMLButtonElement;
 const polishPrompt = () => document.getElementById("polish-prompt") as HTMLTextAreaElement;
 const apiEndpoint = () => document.getElementById("api-endpoint") as HTMLInputElement;
 const apiKey = () => document.getElementById("api-key") as HTMLInputElement;
 const apiModel = () => document.getElementById("api-model") as HTMLInputElement;
+const apiModelSuggestions = () => document.getElementById("api-model-suggestions") as HTMLDataListElement;
+const detectOllamaModelsBtn = () => document.getElementById("detect-ollama-models-btn") as HTMLButtonElement;
+const detectOllamaModelsHint = () => document.getElementById("detect-ollama-models-hint") as HTMLElement;
 const apiSettings = () => document.getElementById("api-settings") as HTMLElement;
+const localPolishSettings = () => document.getElementById("local-polish-settings") as HTMLElement;
 const polishPromptSection = () => document.getElementById("polish-prompt-section") as HTMLElement;
 const screenshotHint = () => document.getElementById("screenshot-hint") as HTMLElement;
 const visionHint = () => document.getElementById("vision-hint") as HTMLElement;
@@ -75,6 +81,14 @@ const I18N: Record<UiLang, Record<string, string>> = {
     polish_api: "Online API",
     api_settings_label: "Online API Settings",
     api_settings_hint: "OpenAI-compatible endpoint. Setup guide: docs/online-api-guide-en.md | docs/online-api-guide-zh.md",
+    local_polish_settings_label: "Local Model Settings",
+    local_polish_settings_hint: "Local mode expects a GGUF file path. Recommended: Qwen2.5-1.5B-Instruct GGUF.",
+    local_polish_ollama_hint: 'If you use Ollama default install, choose "Online API" mode with endpoint http://localhost:11434/v1 and model qwen2.5:1.5b.',
+    local_polish_model_path_placeholder: "/path/to/model.gguf",
+    detect_ollama_models: "Detect Ollama Models",
+    detecting_ollama_models: "Detecting...",
+    detected_ollama_models: "Detected {count} Ollama models.",
+    detect_ollama_models_failed: "Failed to detect Ollama models",
     endpoint: "Endpoint",
     api_key: "API Key",
     model: "Model",
@@ -137,6 +151,14 @@ const I18N: Record<UiLang, Record<string, string>> = {
     polish_api: "在线 API",
     api_settings_label: "在线 API 设置",
     api_settings_hint: "OpenAI 兼容接口。配置指南：docs/online-api-guide-zh.md | docs/online-api-guide-en.md",
+    local_polish_settings_label: "本地模型设置",
+    local_polish_settings_hint: "本地模式需要填写 GGUF 模型文件路径。推荐：Qwen2.5-1.5B-Instruct GGUF。",
+    local_polish_ollama_hint: '如果使用 Ollama 默认安装，请改用“在线 API”模式：Endpoint 填 http://localhost:11434/v1，Model 填 qwen2.5:1.5b。',
+    local_polish_model_path_placeholder: "/path/to/model.gguf",
+    detect_ollama_models: "识别 Ollama 模型",
+    detecting_ollama_models: "识别中...",
+    detected_ollama_models: "已识别 {count} 个 Ollama 模型。",
+    detect_ollama_models_failed: "识别 Ollama 模型失败",
     endpoint: "接口地址",
     api_key: "API 密钥",
     model: "模型",
@@ -184,6 +206,14 @@ function t(key: string): string {
   return I18N[currentUiLang][key] || key;
 }
 
+function tf(key: string, vars: Record<string, string | number>): string {
+  let out = t(key);
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.split(`{${k}}`).join(String(v));
+  }
+  return out;
+}
+
 function setText(id: string, key: string) {
   const el = document.getElementById(id);
   if (el) el.textContent = t(key);
@@ -216,6 +246,12 @@ function applyLanguage() {
   setText("polish-api", "polish_api");
   setText("label-api-settings", "api_settings_label");
   setText("hint-api-settings", "api_settings_hint");
+  setText("label-local-polish-settings", "local_polish_settings_label");
+  setText("hint-local-polish-settings", "local_polish_settings_hint");
+  setText("hint-local-polish-ollama", "local_polish_ollama_hint");
+  setPlaceholder("polish-model-path", "local_polish_model_path_placeholder");
+  setText("polish-model-browse-btn", "browse");
+  setText("detect-ollama-models-btn", "detect_ollama_models");
   setText("api-endpoint-label", "endpoint");
   setText("api-key-label", "api_key");
   setText("api-model-label", "model");
@@ -410,6 +446,22 @@ async function setupBrowse() {
       console.error("browse error:", e);
     }
   });
+
+  polishModelBrowseBtn().addEventListener("click", async () => {
+    try {
+      const selected = await open({
+        directory: false,
+        multiple: false,
+        defaultPath: polishModelPath().value || undefined,
+        filters: [{ name: "GGUF", extensions: ["gguf"] }],
+      });
+      if (selected && typeof selected === "string") {
+        polishModelPath().value = selected;
+      }
+    } catch (e) {
+      console.error("polish model browse error:", e);
+    }
+  });
 }
 
 // ── Polish mode radio ──
@@ -441,17 +493,21 @@ function setPolishMode(enabled: boolean, mode: string) {
 function updatePolishVisibility() {
   const { enabled, mode } = getPolishMode();
   const api = apiSettings();
+  const local = localPolishSettings();
   const prompt = polishPromptSection();
 
   if (!enabled) {
     api.classList.add("hidden");
+    local.classList.add("hidden");
     prompt.classList.add("hidden");
   } else if (mode === "api") {
     api.classList.remove("hidden");
+    local.classList.add("hidden");
     prompt.classList.remove("hidden");
   } else {
     // local mode
     api.classList.add("hidden");
+    local.classList.remove("hidden");
     prompt.classList.remove("hidden");
   }
 }
@@ -464,6 +520,69 @@ function setupPolishRadios() {
       updateScreenshotHint();
     });
   }
+}
+
+function toOllamaTagsUrl(endpoint: string): string {
+  let e = endpoint.trim();
+  if (!e) {
+    e = "http://localhost:11434/v1";
+  }
+  e = e.replace(/\/chat\/completions\/?$/i, "");
+  e = e.replace(/\/v1\/?$/i, "");
+  return `${e}/api/tags`;
+}
+
+function setOllamaSuggestions(models: string[]) {
+  const list = apiModelSuggestions();
+  list.innerHTML = "";
+  for (const m of models) {
+    const opt = document.createElement("option");
+    opt.value = m;
+    list.appendChild(opt);
+  }
+}
+
+async function detectOllamaModels() {
+  const btn = detectOllamaModelsBtn();
+  const hint = detectOllamaModelsHint();
+  const oldText = btn.textContent || t("detect_ollama_models");
+  btn.disabled = true;
+  btn.textContent = t("detecting_ollama_models");
+  hint.textContent = "";
+
+  try {
+    const url = toOllamaTagsUrl(apiEndpoint().value);
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = (await res.json()) as { models?: Array<{ name?: string }> };
+    const names = (data.models || [])
+      .map((x) => (x.name || "").trim())
+      .filter(Boolean);
+
+    if (names.length === 0) {
+      throw new Error("No models found");
+    }
+
+    setOllamaSuggestions(names);
+    if (!apiModel().value.trim()) {
+      apiModel().value = names[0];
+    }
+    hint.textContent = tf("detected_ollama_models", { count: names.length });
+  } catch (e) {
+    console.error("Detect ollama models failed:", e);
+    hint.textContent = `${t("detect_ollama_models_failed")}: ${e}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+function setupOllamaModelDetection() {
+  detectOllamaModelsBtn().addEventListener("click", () => {
+    void detectOllamaModels();
+  });
 }
 
 // ── Screenshot mode ──
@@ -700,6 +819,7 @@ async function loadConfig() {
     apiEndpoint().value = config.api_endpoint || "";
     apiKey().value = config.api_key || "";
     apiModel().value = config.api_model || "";
+    polishModelPath().value = config.polish_model_path || "";
 
     // Screenshot mode
     setScreenshotMode(config.screenshot_mode || "disabled");
@@ -728,6 +848,7 @@ async function saveConfig() {
     polish_prompt: polishPrompt().value,
     polish_enabled: enabled,
     polish_mode: mode,
+    polish_model_path: polishModelPath().value.trim(),
     api_endpoint: apiEndpoint().value.trim(),
     api_key: apiKey().value.trim(),
     api_model: apiModel().value.trim(),
@@ -763,6 +884,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   await detectPlatform();
   applyLanguage();
   setupPolishRadios();
+  setupOllamaModelDetection();
   setupScreenshotRadios();
   setupVisionRadios();
   await loadConfig();

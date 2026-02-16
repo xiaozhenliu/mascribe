@@ -4,6 +4,18 @@ All notable changes to MaScribe are documented here.
 
 ## Unreleased
 
+## 0.3.2 - 2026-02-16
+
+### Added
+- Settings now supports selecting a local GGUF path for local polishing mode.
+- Added `Detect Ollama Models` in settings to auto-discover local Ollama models from `/api/tags`.
+- Added model suggestions dropdown for API model input based on detected Ollama models.
+
+### Changed
+- Improved settings guidance for local GGUF vs Ollama API workflows (bilingual).
+- Updated README and API docs with explicit local-model and Ollama setup instructions.
+- Clarified Windows model setup doc to match runtime config paths and required files.
+
 ## 0.3.1 - 2026-02-16
 
 ### Changed

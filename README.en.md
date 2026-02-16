@@ -8,6 +8,8 @@ English | [中文](README.md)
 
 MaScribe is a local voice-input app. Press a hotkey, speak, and your text is inserted at the current cursor position automatically.
 
+Current release: `v0.3.2`
+
 ## Features
 
 - One-key voice input (default: `Alt+Space`)
@@ -71,6 +73,25 @@ On first launch, allow:
 2. Press `Alt+Space` to start recording
 3. Press again to stop
 4. Text is inserted into the active input field
+
+## AI Polishing Setup
+
+### Local Model Mode
+
+- Local mode uses `llama.cpp` and requires a **GGUF file path**
+- Recommended model: `Qwen2.5-1.5B-Instruct` (GGUF)
+- In settings:
+  - `AI Polishing Engine -> Local Model`
+  - Set or browse a `*.gguf` file in `Local Model Settings`
+
+### Ollama Mode (recommended for machine differences)
+
+If your models are managed by Ollama, use `Online API` mode:
+
+1. `AI Polishing Engine -> Online API`
+2. Set `Endpoint` to `http://localhost:11434/v1`
+3. Click `Detect Ollama Models` to auto-discover local models
+4. Pick one from `Model` suggestions (e.g. `qwen2.5:1.5b`)
 
 ## Troubleshooting
 
