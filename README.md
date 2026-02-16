@@ -52,6 +52,7 @@ tccutil reset Accessibility com.mascribe
 
 详细文档请看 `docs/`：
 
+- macOS 安装与权限：`docs/macos-guide.md`
 - 在线 API 配置：`docs/online-api-guide-zh.md`
 - Windows 构建：`docs/windows-build-guide.md`
 - 产品与设计说明：`docs/PRD.md`
