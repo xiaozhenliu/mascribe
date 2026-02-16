@@ -4,7 +4,7 @@ set -euo pipefail
 MODEL_ARCHIVE="sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
 MODEL_DIR_NAME="sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17"
 MODEL_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/${MODEL_ARCHIVE}"
-TARGET_ROOT="${HOME}/.openclaw/models/sensevoice"
+TARGET_ROOT="${HOME}/Library/Application Support/com.mascribe/models/sensevoice"
 TARGET_DIR="${TARGET_ROOT}/${MODEL_DIR_NAME}"
 
 echo "[model] Target: ${TARGET_DIR}"

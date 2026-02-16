@@ -24,8 +24,8 @@ MaScribe 是一个本地语音输入工具（当前优先支持 macOS）。
 方式 B（你只下载了 DMG，没有源码）：
 
 ```bash
-mkdir -p ~/.openclaw/models/sensevoice
-cd ~/.openclaw/models/sensevoice
+mkdir -p "$HOME/Library/Application Support/com.mascribe/models/sensevoice"
+cd "$HOME/Library/Application Support/com.mascribe/models/sensevoice"
 curl -L -o sensevoice.tar.bz2 \
   https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2
 tar -xjf sensevoice.tar.bz2
@@ -34,7 +34,7 @@ rm -f sensevoice.tar.bz2
 
 默认模型目录（macOS）：
 
-`~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
+`~/Library/Application Support/com.mascribe/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
 
 安装成功后目录内至少有：
 
@@ -44,7 +44,8 @@ rm -f sensevoice.tar.bz2
 可用下面命令验证：
 
 ```bash
-ls ~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/{model.int8.onnx,tokens.txt}
+ls "$HOME/Library/Application Support/com.mascribe/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/model.int8.onnx" \
+   "$HOME/Library/Application Support/com.mascribe/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/tokens.txt"
 ```
 
 ## 下载与安装

@@ -19,6 +19,17 @@ Rules:
 
 {text}";
 
+const SENSEVOICE_DIR: &str = "sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17";
+const POLISH_MODEL_FILE: &str = "qwen2.5-1.5b/qwen2.5-1.5b-instruct-q4_k_m.gguf";
+const VISION_MODEL_DIR: &str = "minicpm-v-2_6";
+
+fn models_root() -> PathBuf {
+    dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("com.mascribe")
+        .join("models")
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     pub model_dir: String,
@@ -61,13 +72,10 @@ pub struct AppConfig {
 
 impl Default for AppConfig {
     fn default() -> Self {
-        let home = dirs::home_dir().unwrap();
-        let model_dir = home
-            .join(".openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17")
-            .to_string_lossy()
-            .to_string();
-        let polish_model_path = home
-            .join(".openclaw/models/qwen2.5-1.5b/qwen2.5-1.5b-instruct-q4_k_m.gguf")
+        let models_root = models_root();
+        let model_dir = models_root.join(SENSEVOICE_DIR).to_string_lossy().to_string();
+        let polish_model_path = models_root
+            .join(POLISH_MODEL_FILE)
             .to_string_lossy()
             .to_string();
         let recordings_dir = dirs::data_dir()
@@ -92,10 +100,7 @@ impl Default for AppConfig {
             api_model: String::new(),
             screenshot_mode: "disabled".to_string(),
             screenshot_max_size: 1024,
-            vision_model_path: home
-                .join(".openclaw/models/minicpm-v-2_6")
-                .to_string_lossy()
-                .to_string(),
+            vision_model_path: models_root.join(VISION_MODEL_DIR).to_string_lossy().to_string(),
             vision_mode: "disabled".to_string(),
             vision_max_image_size: 448,
             ocr_endpoint: "http://localhost:11434/v1".to_string(),

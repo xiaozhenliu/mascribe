@@ -30,8 +30,8 @@
 直接执行下面命令：
 
 ```bash
-mkdir -p ~/.openclaw/models/sensevoice
-cd ~/.openclaw/models/sensevoice
+mkdir -p "$HOME/Library/Application Support/com.mascribe/models/sensevoice"
+cd "$HOME/Library/Application Support/com.mascribe/models/sensevoice"
 curl -L -o sensevoice.tar.bz2 \
   https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2
 tar -xjf sensevoice.tar.bz2
@@ -40,7 +40,7 @@ rm -f sensevoice.tar.bz2
 
 默认模型目录：
 
-`~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
+`~/Library/Application Support/com.mascribe/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
 
 必须包含：
 
@@ -52,7 +52,8 @@ rm -f sensevoice.tar.bz2
 执行：
 
 ```bash
-ls ~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/{model.int8.onnx,tokens.txt}
+ls "$HOME/Library/Application Support/com.mascribe/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/model.int8.onnx" \
+   "$HOME/Library/Application Support/com.mascribe/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/tokens.txt"
 ```
 
 如果能看到这两个文件路径，说明模型已可用。
