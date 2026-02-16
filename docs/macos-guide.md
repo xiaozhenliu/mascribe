@@ -10,7 +10,29 @@
 
 ---
 
-## 二、首次启动弹窗（请引导客户这样操作）
+## 二、安装后先准备本地转写模型（必须）
+
+当前版本不会自动下载语音模型。  
+如果缺少模型文件，语音转写会失败。
+
+默认模型目录：
+
+`~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
+
+必须包含：
+
+- `model.int8.onnx`
+- `tokens.txt`
+
+检查命令：
+
+```bash
+ls ~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/{model.int8.onnx,tokens.txt}
+```
+
+---
+
+## 三、首次启动弹窗（请引导客户这样操作）
 
 macOS 首次使用时，常见弹窗如下。
 
@@ -38,7 +60,7 @@ macOS 首次使用时，常见弹窗如下。
 
 ---
 
-## 三、基础使用
+## 四、基础使用
 
 1. 启动 MaScribe（菜单栏图标）
 2. 按默认快捷键 `Alt+Space` 开始录音
@@ -47,7 +69,7 @@ macOS 首次使用时，常见弹窗如下。
 
 ---
 
-## 四、常见问题
+## 五、常见问题
 
 ### 1) 录音正常但不会自动粘贴
 
@@ -81,4 +103,3 @@ tccutil reset Accessibility com.mascribe
 ```bash
 ~/Library/Logs/MaScribe.log
 ```
-

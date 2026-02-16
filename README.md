@@ -8,6 +8,26 @@ MaScribe 是一个本地语音输入工具（当前优先支持 macOS）。
 - 支持 AI 润色（本地模型或在线 API）
 - 支持截图 OCR 上下文（用于同音字纠错）
 
+## 重要：首次使用前必须准备本地转写模型
+
+当前版本不会自动下载语音模型。  
+如果本地缺少模型文件，应用将无法完成语音转写。
+
+默认模型目录（macOS）：
+
+`~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
+
+目录内至少要有：
+
+- `model.int8.onnx`
+- `tokens.txt`
+
+可用下面命令快速检查：
+
+```bash
+ls ~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/{model.int8.onnx,tokens.txt}
+```
+
 ## 下载与安装
 
 优先使用发布包（推荐）：
