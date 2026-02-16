@@ -60,8 +60,8 @@ git --version
 
 ```powershell
 # 克隆仓库
-git clone <你的仓库地址> mac-voice-input
-cd mac-voice-input
+git clone <你的仓库地址> mascribe
+cd mascribe
 ```
 
 ---
@@ -300,6 +300,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 如果遇到问题：
 
-1. 查看 `%APPDATA%\VoiceInput\logs\VoiceInput.log` 日志文件
+1. 查看 `%APPDATA%\MaScribe\logs\MaScribe.log` 日志文件
 2. 在终端运行 `npm run tauri -- dev` 查看实时输出
 3. 检查模型路径是否正确

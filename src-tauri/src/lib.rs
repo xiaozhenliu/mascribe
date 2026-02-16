@@ -29,7 +29,7 @@ fn setup_file_logging() {
 
     let log_dir = dirs::home_dir().unwrap().join("Library/Logs");
     let _ = fs::create_dir_all(&log_dir);
-    let log_path = log_dir.join("VoiceInput.log");
+    let log_path = log_dir.join("MaScribe.log");
 
     // Truncate and open for writing
     if let Ok(file) = fs::OpenOptions::new()
@@ -45,7 +45,7 @@ fn setup_file_logging() {
         }
         // Keep file open by leaking it (lives for process lifetime)
         std::mem::forget(file);
-        println!("[VoiceInput] Logging to {}", log_path.display());
+        println!("[MaScribe] Logging to {}", log_path.display());
     }
 }
 
@@ -56,14 +56,14 @@ fn setup_file_logging() {
 
     let log_dir = dirs::data_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("VoiceInput")
+        .join("MaScribe")
         .join("logs");
     let _ = fs::create_dir_all(&log_dir);
-    let log_path = log_dir.join("VoiceInput.log");
+    let log_path = log_dir.join("MaScribe.log");
 
     // On Windows, we can't easily redirect stdout/stderr like on Unix
     // For now, just print the log location
-    println!("[VoiceInput] Logs would go to: {}", log_path.display());
+    println!("[MaScribe] Logs would go to: {}", log_path.display());
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -78,7 +78,7 @@ pub fn run() {
         //    the TCC dialog. We call AVCaptureDevice.requestAccess instead.
         let mic_granted = permissions::request_microphone_permission();
         if !mic_granted {
-            println!("[VoiceInput] WARNING: Microphone permission not granted! Audio will be silent.");
+            println!("[MaScribe] WARNING: Microphone permission not granted! Audio will be silent.");
         }
 
         // 2. Accessibility — needed for CGEvent.post() to simulate Cmd+V.
@@ -86,7 +86,7 @@ pub fn run() {
         //    directing the user to System Settings → Accessibility.
         let ax_trusted = permissions::request_accessibility_permission();
         if !ax_trusted {
-            println!("[VoiceInput] WARNING: Accessibility not granted! Cmd+V paste will not work.");
+            println!("[MaScribe] WARNING: Accessibility not granted! Cmd+V paste will not work.");
         }
     }
 
@@ -113,7 +113,7 @@ pub fn run() {
     // Load correction dictionary from app data directory
     let dict_path = dirs::data_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("com.mac-voice-input")
+        .join("com.mascribe")
         .join("corrections.json");
     let correction_dict = CorrectionDictionary::load(&dict_path).unwrap_or_else(|e| {
         println!("[correction] No dictionary found ({}), using empty", e);
@@ -125,21 +125,21 @@ pub fn run() {
         match PolishingEngine::new(&config.polish_model_path, 99) {
             Ok(engine) => {
                 println!(
-                    "[VoiceInput] Polishing LLM loaded from: {}",
+                    "[MaScribe] Polishing LLM loaded from: {}",
                     config.polish_model_path
                 );
                 Some(Mutex::new(engine))
             }
             Err(e) => {
                 println!(
-                    "[VoiceInput] Polishing LLM not available ({}), polishing disabled",
+                    "[MaScribe] Polishing LLM not available ({}), polishing disabled",
                     e
                 );
                 None
             }
         }
     } else {
-        println!("[VoiceInput] Polishing disabled in config");
+        println!("[MaScribe] Polishing disabled in config");
         None
     };
 

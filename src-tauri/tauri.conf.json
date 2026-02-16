@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Voice Input",
+  "productName": "MaScribe",
   "version": "0.2.0",
-  "identifier": "com.mac-voice-input",
+  "identifier": "com.mascribe",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -15,7 +15,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Voice Input",
+        "title": "MaScribe",
         "width": 260,
         "height": 100,
         "decorations": false,
@@ -41,7 +41,7 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "signingIdentity": "VoiceInput Dev",
+      "signingIdentity": "MaScribe Dev",
       "entitlements": "Entitlements.plist",
       "minimumSystemVersion": "11.0",
       "frameworks": [

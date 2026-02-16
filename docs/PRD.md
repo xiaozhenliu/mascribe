@@ -1,8 +1,8 @@
-# Voice Input — 产品需求文档 (PRD)
+# MaScribe — 产品需求文档 (PRD)
 
 ## 概述
 
-**产品名称**: Voice Input (mac-voice-input)
+**产品名称**: MaScribe（马上听写） (mascribe)
 
 **一句话描述**: macOS 桌面应用，按住快捷键说话，本地语音转文字后自动输入到任意 App。
 
@@ -100,7 +100,7 @@ macOS 自带的语音听写功能依赖网络且准确率有限，特别是对�
 ### 7. 录音保存与重试
 
 - 每次录音结束后，先将原始音频保存为 WAV 文件，再进行转写
-- WAV 文件保存位置：`~/Library/Application Support/com.mac-voice-input/recordings/`
+- WAV 文件保存位置：`~/Library/Application Support/com.mascribe/recordings/`
 - 文件命名格式：`recording-YYYYMMDD-HHmmss.wav`（时间戳精确到秒）
 - 保存原始采样率（48kHz），未经重采样的完整音频
 - 目的：转写出错时可重试，也可用于后续分析和调试
@@ -335,7 +335,7 @@ OCR 引擎以 `zh-Hans`（中文简体）初始化时，**天然支持** ASCII �
 ## 项目结构
 
 ```
-mac-voice-input/
+mascribe/
 ├── docs/
 │   └── PRD.md                    # 本文档
 ├── src-tauri/                    # Rust 后端

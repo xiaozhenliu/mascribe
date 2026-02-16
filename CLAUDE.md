@@ -1,4 +1,4 @@
-# mac-voice-input
+# mascribe
 
 macOS 语音输入工具 — 按住快捷键说话，本地转写后自动输入到任意 App。
 
@@ -19,8 +19,8 @@ macOS 语音输入工具 — 按住快捷键说话，本地转写后自动输入
 
 - **SenseVoice Model**: `~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
 - **Polish Model (Qwen)**: `~/.openclaw/models/qwen2.5-1.5b/qwen2.5-1.5b-instruct-q4_k_m.gguf`
-- **App Config**: `~/Library/Application Support/com.mac-voice-input/config.json`
-- **Corrections Dict**: `~/Library/Application Support/com.mac-voice-input/corrections.json`
+- **App Config**: `~/Library/Application Support/com.mascribe/config.json`
+- **Corrections Dict**: `~/Library/Application Support/com.mascribe/corrections.json`
 - **PRD**: `docs/PRD.md`
 
 ## Development

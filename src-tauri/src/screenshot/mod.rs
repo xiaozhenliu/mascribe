@@ -71,7 +71,7 @@ pub fn encode_base64(png_bytes: &[u8]) -> String {
 pub fn save_screenshot(png_bytes: &[u8]) -> Result<PathBuf, String> {
     let screenshots_dir = dirs::data_dir()
         .ok_or("Failed to get data directory")?
-        .join("com.mac-voice-input")
+        .join("com.mascribe")
         .join("screenshots");
 
     std::fs::create_dir_all(&screenshots_dir)

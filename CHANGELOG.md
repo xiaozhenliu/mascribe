@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Voice Input are documented here.
+All notable changes to MaScribe are documented here.
 
 ## Unreleased
 

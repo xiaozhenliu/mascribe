@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Voice Input needs microphone access to capture speech for transcription.</string>
+	<string>MaScribe needs microphone access to capture speech for transcription.</string>
 </dict>
 </plist>

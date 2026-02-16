@@ -72,7 +72,7 @@ impl Default for AppConfig {
             .to_string();
         let recordings_dir = dirs::data_dir()
             .unwrap_or_else(|| PathBuf::from("."))
-            .join("com.mac-voice-input")
+            .join("com.mascribe")
             .join("recordings")
             .to_string_lossy()
             .to_string();
@@ -109,7 +109,7 @@ impl AppConfig {
     pub fn config_path() -> PathBuf {
         dirs::data_dir()
             .unwrap_or_else(|| PathBuf::from("."))
-            .join("com.mac-voice-input")
+            .join("com.mascribe")
             .join("config.json")
     }
 

@@ -1,12 +1,12 @@
 [package]
-name = "mac-voice-input"
+name = "mascribe"
 version = "0.2.0"
-description = "macOS voice input tool with local SenseVoice transcription"
+description = "Cross-platform speech-to-text app with local SenseVoice transcription"
 authors = ["you"]
 edition = "2021"
 
 [lib]
-name = "mac_voice_input_lib"
+name = "mascribe_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

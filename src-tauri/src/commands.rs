@@ -89,7 +89,7 @@ pub fn save_corrections(
     // Save to disk
     let dict_path = dirs::data_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("com.mac-voice-input")
+        .join("com.mascribe")
         .join("corrections.json");
     new_dict
         .save(&dict_path)

@@ -283,9 +283,9 @@ function updateScreenshotHint() {
     hint.textContent = "";
   } else if (screenshotMode === "save") {
     if (currentPlatform === "windows") {
-      hint.textContent = "Screenshots will be saved to %APPDATA%/com.mac-voice-input/screenshots/";
+      hint.textContent = "Screenshots will be saved to %APPDATA%/com.mascribe/screenshots/";
     } else if (currentPlatform === "macos") {
-      hint.textContent = "Screenshots will be saved to ~/Library/Application Support/com.mac-voice-input/screenshots/";
+      hint.textContent = "Screenshots will be saved to ~/Library/Application Support/com.mascribe/screenshots/";
     } else {
       hint.textContent = "Screenshots will be saved to the app data screenshots folder.";
     }

@@ -1,6 +1,6 @@
 # Online API Configuration Guide
 
-Voice Input supports using online LLM APIs (OpenAI-compatible format) for text polishing.
+MaScribe supports using online LLM APIs (OpenAI-compatible format) for text polishing.
 This provides higher quality results than the local 1.5B model, especially for:
 
 - Homophone correction (同音字纠错)

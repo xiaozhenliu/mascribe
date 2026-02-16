@@ -1,4 +1,4 @@
-# Voice Input
+# MaScribe（马上听写）
 
 Local speech-to-text tool for macOS and Windows. Press a hotkey, speak, and the transcribed text is automatically pasted into any app.
 
@@ -189,19 +189,19 @@ Download the latest release from [Releases](../../releases):
 # 1. 安装前置条件（见上方表格）
 
 # 2. Clone and build / 克隆并构建
-git clone https://github.com/user/mac-voice-input.git
-cd mac-voice-input
+git clone https://github.com/user/mascribe.git
+cd mascribe
 npm install
 npx tauri build
 ```
 
 Output:
-- macOS: `src-tauri/target/release/bundle/macos/Voice Input.app`
+- macOS: `src-tauri/target/release/bundle/macos/MaScribe.app`
 - Windows: `src-tauri/target/release/bundle/msi/*.msi`
 
 ## Usage / 使用方法
 
-1. Launch Voice Input — it appears as a menu bar (macOS) / system tray (Windows) icon
+1. Launch MaScribe — it appears as a menu bar (macOS) / system tray (Windows) icon
 2. Grant permissions when prompted (macOS: Microphone, Accessibility, Input Monitoring)
 3. Press the hotkey (default **Alt+Space**) to start recording
 4. Speak in any supported language
@@ -209,7 +209,7 @@ Output:
 
 ---
 
-1. 启动 Voice Input — 在菜单栏（macOS）/ 系统托盘（Windows）显示图标
+1. 启动 MaScribe — 在菜单栏（macOS）/ 系统托盘（Windows）显示图标
 2. 授予所需权限（macOS：麦克风、辅助功能、输入监控）
 3. 按下快捷键（默认 **Alt+Space**）开始录音
 4. 用任何支持的语言说话

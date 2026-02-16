@@ -18,7 +18,7 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
         .id("settings")
         .build(app)?;
 
-    let quit_item = MenuItemBuilder::new("Quit Voice Input")
+    let quit_item = MenuItemBuilder::new("Quit MaScribe")
         .id("quit")
         .build(app)?;
 
@@ -35,7 +35,7 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
 
     TrayIconBuilder::new()
         .icon(tray_icon)
-        .tooltip("Voice Input")
+        .tooltip("MaScribe")
         .icon_as_template(true) // Adapts to macOS light/dark menu bar
         .menu(&menu)
         .on_menu_event(|app, event| match event.id().as_ref() {
@@ -69,7 +69,7 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
                         "settings",
                         WebviewUrl::App("settings.html".into()),
                     )
-                    .title("Voice Input Settings")
+                    .title("MaScribe Settings")
                     .inner_size(520.0, 580.0)
                     .min_inner_size(520.0, 400.0)
                     .resizable(true)
