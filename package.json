@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "security:secrets": "bash scripts/gitleaks-scan.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
