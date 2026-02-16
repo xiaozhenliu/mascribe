@@ -1,305 +1,98 @@
-# Windows 构建指南
+# MaScribe Windows 安装与构建指南
 
-本文档介绍如何从零开始在 Windows 上构建语音输入工具。
+这份文档只保留 Windows 用户真正需要的内容：安装、启动、权限确认、常见问题。
+
+## 一、普通用户安装（推荐）
+
+1. 在 GitHub Releases 下载 Windows 安装包（`.msi` 或 `.exe`）
+2. 双击安装
+3. 启动 MaScribe，按提示完成首次授权
+
+安装后默认快捷键是 `Alt+Space`。
 
 ---
 
-## 前置要求
+## 二、首次启动权限弹窗（请引导客户这样点）
 
-你需要安装以下软件：
+Windows 上可能出现以下弹窗，这些都属于正常现象：
 
-### 1. Rust 工具链
+1. SmartScreen（“Windows 已保护你的电脑”）
+- 点击 `更多信息`
+- 再点击 `仍要运行`
+
+2. UAC（用户账户控制）
+- 点击 `是`
+
+3. 麦克风权限提示（首次录音时）
+- 请选择 `允许`
+
+如果客户没看到麦克风弹窗但录音无效：
+- 打开 `设置 -> 隐私和安全性 -> 麦克风`
+- 打开 `允许应用访问麦克风`
+- 打开 `允许桌面应用访问麦克风`
+
+说明：
+- MaScribe 的自动粘贴、快捷键、截图在 Windows 通常不需要额外系统授权弹窗。
+- 如果启用“屏幕 OCR（Windows Built-in）”并要识别中文，需额外安装 OCR 中文语言包（见下文）。
+
+---
+
+## 三、可选功能：Windows 原生 OCR（中文）
+
+如果你要使用“截图 OCR 上下文”且需要中文识别：
 
 ```powershell
-# 下载 Rust 安装程序
-# 访问 https://rustup.rs/ 下载 rustup-init.exe
-# 或者使用 winget：
+# 管理员 PowerShell
+Add-WindowsCapability -Online -Name Language.OCR~~~zh-Hans~0.0.1.0
+```
+
+安装后在应用设置中选择：
+- `Screen OCR -> Windows Built-in`
+
+---
+
+## 四、从源码构建（开发者）
+
+### 1) 安装依赖
+
+```powershell
 winget install Rustlang.Rustup
-
-# 安装完成后，重启终端，然后运行：
-rustup default stable
-rustc --version  # 验证安装
-```
-
-### 2. Visual Studio 2022 (Build Tools)
-
-```powershell
-# 方法1：使用 winget 安装 Build Tools
-winget install Microsoft.VisualStudio.2022.BuildTools
-
-# 方法2：手动下载
-# 访问 https://visualstudio.microsoft.com/downloads/
-# 下载 "Visual Studio Build Tools 2022"
-# 安装时选择 "使用 C++ 的桌面开发" 工作负载
-```
-
-### 3. Node.js 和 npm
-
-```powershell
-# 使用 winget 安装
 winget install OpenJS.NodeJS
-
-# 验证安装
-node --version
-npm --version
-```
-
-### 4. Git
-
-```powershell
-# 使用 winget 安装
+winget install Microsoft.VisualStudio.2022.BuildTools
 winget install Git.Git
-
-# 验证安装
-git --version
 ```
 
----
+安装 Build Tools 时请勾选：`使用 C++ 的桌面开发`。
 
-## 下载项目代码
+### 2) 拉代码并构建
 
 ```powershell
-# 克隆仓库
-git clone <你的仓库地址> mascribe
+git clone git@github.com:xiaozhenliu/mascribe.git
 cd mascribe
-```
-
----
-
-## 安装前端依赖
-
-```powershell
-# 在项目根目录下
 npm install
-```
-
----
-
-## 下载语音模型
-
-SenseVoice 模型是必需的，用于语音识别。
-
-### 方法1：自动下载（推荐）
-
-```powershell
-# 创建模型目录
-mkdir "%USERPROFILE%\.openclaw\models\sensevoice"
-
-# 下载模型文件（使用 PowerShell）
-# 模型文件较大（约 300MB），需要一些时间
-
-# 下载模型配置和字典文件
-Invoke-WebRequest -Uri "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2" -OutFile "sensevoice.tar.bz2"
-
-# 解压（需要安装 7-Zip 或 tar）
-# 如果使用 7-Zip：
-# 7z x sensevoice.tar.bz2
-# 7z x sensevoice.tar
-
-# 或者使用 Windows 11 自带的 tar：
-tar -xjf sensevoice.tar.bz2
-
-# 将解压后的文件移动到模型目录
-move sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17 "%USERPROFILE%\.openclaw\models\sensevoice\"
-```
-
-### 方法2：手动下载
-
-1. 访问 https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
-2. 搜索 "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17"
-3. 下载 `.tar.bz2` 文件
-4. 解压到 `%USERPROFILE%\.openclaw\models\sensevoice\`
-
-### 验证模型文件
-
-模型目录应该包含以下文件：
-
-```
-%USERPROFILE%\.openclaw\models\sensevoice\
-├── model.int8.onnx
-├── tokens.txt
-├── sense-voice-zh-en-ja-ko-yue.int8.onnx
-└── ... (其他配置文件)
-```
-
----
-
-## 构建项目
-
-### 开发模式（推荐用于测试）
-
-```powershell
-# 在项目根目录下运行（统一推荐）
-npm run tauri -- dev
-
-# 等价命令（可选）
-# npx tauri dev
-```
-
-这会：
-1. 编译 Rust 后端
-2. 启动 Vite 开发服务器
-3. 打开应用窗口
-
-第一次编译需要较长时间（5-15分钟），因为需要下载和编译所有依赖。
-
-### 生产构建
-
-```powershell
-# 构建可执行文件
 npm run tauri -- build
-
-# 等价命令（可选）
-# npx tauri build
 ```
 
-构建完成后，安装包位于：
-- `src-tauri/target/release/bundle/msi/*.msi`
-- `src-tauri/target/release/bundle/nsis/*.exe`
+构建产物位置：
+- `src-tauri/target/release/bundle/msi/`
+- `src-tauri/target/release/bundle/nsis/`
 
 ---
 
-## 常见问题
+## 五、最常见问题
 
-### 1. 编译错误：找不到 Windows SDK
+1. 启动后无文字自动输入
+- 先确认麦克风权限已开启
+- 再确认你光标在可编辑输入框中
+- 查看日志：`%APPDATA%\MaScribe\logs\MaScribe.log`
 
+2. 构建报 linker / SDK 错误
+- 补装：`Desktop development with C++`
+- 必要时安装 Windows SDK：
 ```powershell
-# 安装 Windows SDK
 winget install Microsoft.WindowsSDK.10.0.22621
 ```
 
-### 2. 编译错误：linker 找不到
+3. 识别中文 OCR 失败
+- 按第三节安装 `Language.OCR~~~zh-Hans~0.0.1.0`
 
-确保安装了 Visual Studio Build Tools 的 "使用 C++ 的桌面开发" 工作负载。
-
-### 3. 模型加载失败
-
-检查模型路径是否正确：
-
-```powershell
-# 检查模型目录是否存在
-ls "%USERPROFILE%\.openclaw\models\sensevoice"
-
-# 如果不存在，手动创建并下载模型
-```
-
-### 4. 缺少 DLL 错误
-
-如果运行时提示缺少 `VCRUNTIME140.dll` 等：
-
-```powershell
-# 安装 Visual C++ Redistributable
-winget install Microsoft.VCRedist.2015+.x64
-```
-
----
-
-## 完整构建脚本
-
-创建一个 `build-windows.ps1` 文件：
-
-```powershell
-# build-windows.ps1
-# 一键构建脚本
-
-Write-Host "=== Windows 构建脚本 ===" -ForegroundColor Green
-
-# 检查必要工具
-$tools = @("rustc", "node", "npm", "git")
-foreach ($tool in $tools) {
-    if (!(Get-Command $tool -ErrorAction SilentlyContinue)) {
-        Write-Error "缺少工具: $tool，请先安装"
-        exit 1
-    }
-}
-
-# 安装前端依赖
-Write-Host "安装前端依赖..." -ForegroundColor Yellow
-npm install
-
-# 检查模型
-$modelPath = "$env:USERPROFILE\.openclaw\models\sensevoice"
-if (!(Test-Path $modelPath)) {
-    Write-Host "模型未找到，请手动下载到: $modelPath" -ForegroundColor Red
-    Write-Host "下载地址: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models"
-    exit 1
-}
-
-# 开发构建
-Write-Host "启动开发构建..." -ForegroundColor Yellow
-npm run tauri -- dev
-```
-
-运行：
-
-```powershell
-# 设置执行策略（首次运行 PowerShell 脚本需要）
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# 运行构建脚本
-.\build-windows.ps1
-```
-
----
-
-## 下一步
-
-构建成功后，你可以：
-
-1. **测试基本功能**：
-   - 按热键（默认 Alt+Space）开始录音
-   - 说话后松开，看是否能识别并输入文字
-
-2. **配置设置**：
-   - 右键系统托盘图标打开设置
-   - 修改热键、选择语言等
-
-3. **（可选）下载 AI 润色模型**：
-   - 下载 Qwen 2.5 1.5B GGUF 模型
-   - 放到 `%USERPROFILE%\.openclaw\models\qwen2.5-1.5b\`
-
-4. **（可选）安装 OCR 语言包（屏幕 OCR 上下文功能）**：
-   - 应用使用 Windows 原生 OCR (`Windows.Media.Ocr`) 提取屏幕文字作为 AI 润色上下文
-   - 英文 OCR 通常已预装
-   - 中文简体 OCR 需手动安装：
-     ```powershell
-     # PowerShell (管理员)
-     Add-WindowsCapability -Online -Name Language.OCR~~~zh-Hans~0.0.1.0
-     ```
-   - 或在 `Settings → Language & Region` 中添加中文语言包
-   - 中文 OCR 引擎天然支持中英文混合识别（代码、注释、网页等）
-   - 在应用设置中，选择 `Screen OCR → Windows Built-in / 系统内置`
-
----
-
-## 热键配置说明
-
-### 支持的热键类型
-
-**标准组合键**（使用 tauri-plugin-global-shortcut）：
-- `Alt+Space` - Alt+空格
-- `Ctrl+Shift+S` - Ctrl+Shift+S
-- `CmdOrCtrl+Shift+A` - Command/Ctrl+Shift+A
-
-**特殊键**（使用原生 Windows API）：
-- `ContextMenu` - 菜单键（键盘上的右键菜单键）
-- `F13` - `F24` - 扩展功能键
-
-### 特殊键说明
-
-某些键（如 `ContextMenu`、`F13-F24`）无法通过标准全局快捷键 API 注册，应用会自动使用 Windows 原生低级别键盘钩子（SetWindowsHookEx）来捕获这些键。
-
-在设置界面中：
-- 点击热键输入框并按想要的组合键
-- 或者使用 "Presets" 下拉菜单选择特殊键
-- `ContextMenu` 键可以通过下拉菜单选择，或在输入框中右键点击捕获
-
----
-
-## 需要帮助？
-
-如果遇到问题：
-
-1. 查看 `%APPDATA%\MaScribe\logs\MaScribe.log` 日志文件
-2. 在终端运行 `npm run tauri -- dev` 查看实时输出
-3. 检查模型路径是否正确
