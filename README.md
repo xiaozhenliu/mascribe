@@ -1,6 +1,6 @@
 # MaScribe（马上听写）
 
-MaScribe 是一个本地语音输入工具（macOS / Windows）。
+MaScribe 是一个本地语音输入工具（当前优先支持 macOS）。
 按下快捷键说话，停止后文本会自动粘贴到当前光标位置。
 
 - 默认快捷键：`Alt+Space`
@@ -14,7 +14,6 @@ MaScribe 是一个本地语音输入工具（macOS / Windows）。
 
 - 打开仓库 **Releases** 下载最新版
 - macOS：下载 `.dmg`，拖拽到 `Applications`
-- Windows：下载 `.msi` 或 `.exe`
 
 ## 快速开始
 
@@ -46,7 +45,6 @@ tccutil reset Accessibility com.mascribe
 - 本地源码打包：`docs/local-build-guide.md`
 - macOS 安装与权限：`docs/macos-guide.md`
 - 在线 API 配置：`docs/online-api-guide-zh.md`
-- Windows 构建：`docs/windows-build-guide.md`
 - 产品与设计说明：`docs/PRD.md`
 
 ## 从源码构建（开发者）
@@ -64,7 +62,6 @@ npx tauri build
 
 - macOS App：`src-tauri/target/release/bundle/macos/MaScribe.app`
 - macOS DMG：`src-tauri/target/release/bundle/dmg/MaScribe_*.dmg`
-- Windows 安装包：`src-tauri/target/release/bundle/msi/` 或 `nsis/`
 
 ## License
 

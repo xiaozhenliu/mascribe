@@ -68,22 +68,11 @@ npx tauri build --no-sign
 
 ---
 
-## 5. Windows 打包
+## 5. Windows 说明（当前状态）
 
-### 5.1 额外依赖
+当前仓库尚未发布可交付的 Windows 安装包，因此这里不提供 `MSI/EXE` 产物说明。
 
-- Visual Studio Build Tools 2022（勾选 `Desktop development with C++`）
-
-### 5.2 打包命令
-
-```powershell
-npm run tauri -- build
-```
-
-### 5.3 产物位置
-
-- MSI：`src-tauri/target/release/bundle/msi/`
-- EXE（NSIS）：`src-tauri/target/release/bundle/nsis/`
+如果你只在 WSL 开发，通常无法直接产出可分发的 Windows 安装包；后续建议在原生 Windows 环境补齐 Node.js、Rust、Build Tools 后再做 Windows 打包验证。
 
 ---
 
@@ -112,5 +101,3 @@ security find-identity -v -p codesigning
 ### 7.2 打包成功但运行被系统拦截
 
 - macOS：`系统设置 -> 隐私与安全性` 中选择 `仍要打开`
-- Windows：SmartScreen 点击 `更多信息 -> 仍要运行`
-
