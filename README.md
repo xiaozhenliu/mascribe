@@ -1,5 +1,9 @@
 # MaScribe（马上听写）
 
+[![Release](https://img.shields.io/github/v/release/xiaozhenliu/mascribe?label=release)](https://github.com/xiaozhenliu/mascribe/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Platform: macOS](https://img.shields.io/badge/platform-macOS-blue.svg)](docs/macos-guide.md)
+
 [English](README.en.md) | 中文
 
 MaScribe 是一个本地语音输入工具。按下快捷键说话，结束后自动把文本输入到当前光标位置。

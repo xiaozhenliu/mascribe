@@ -1,5 +1,9 @@
 # MaScribe
 
+[![Release](https://img.shields.io/github/v/release/xiaozhenliu/mascribe?label=release)](https://github.com/xiaozhenliu/mascribe/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Platform: macOS](https://img.shields.io/badge/platform-macOS-blue.svg)](docs/macos-guide.md)
+
 English | [中文](README.md)
 
 MaScribe is a local voice-input app. Press a hotkey, speak, and your text is inserted at the current cursor position automatically.

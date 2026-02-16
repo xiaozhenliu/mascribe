@@ -71,7 +71,43 @@ npm run tauri -- build
 
 ---
 
-## 四、最常见问题
+## 四、Windows 本地语音模型准备（必须）
+
+即使后续拿到 Windows 可执行包，首次使用前也必须准备本地 SenseVoice 模型。  
+缺少模型文件时，语音转写会失败。
+
+默认目录（与代码一致）：
+
+`%APPDATA%\com.mascribe\models\sensevoice\sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17\`
+
+### 1) 下载并解压模型（PowerShell）
+
+```powershell
+$modelsRoot = Join-Path $env:APPDATA "com.mascribe\models\sensevoice"
+New-Item -ItemType Directory -Force -Path $modelsRoot | Out-Null
+Set-Location $modelsRoot
+
+$url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
+$archive = "sensevoice.tar.bz2"
+
+Invoke-WebRequest -Uri $url -OutFile $archive
+tar -xjf $archive
+Remove-Item $archive
+```
+
+### 2) 验证模型文件
+
+```powershell
+$base = Join-Path $env:APPDATA "com.mascribe\models\sensevoice\sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17"
+Test-Path (Join-Path $base "model.int8.onnx")
+Test-Path (Join-Path $base "tokens.txt")
+```
+
+两个命令都返回 `True` 才表示模型准备完成。
+
+---
+
+## 五、最常见问题
 
 1. 启动后无文字自动输入
 - 先确认麦克风权限已开启
