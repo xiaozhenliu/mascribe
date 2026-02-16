@@ -129,8 +129,11 @@ move sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17 "%USERPROFILE%\.ope
 ### 开发模式（推荐用于测试）
 
 ```powershell
-# 在项目根目录下运行
-cargo tauri dev
+# 在项目根目录下运行（统一推荐）
+npm run tauri -- dev
+
+# 等价命令（可选）
+# npx tauri dev
 ```
 
 这会：
@@ -144,7 +147,10 @@ cargo tauri dev
 
 ```powershell
 # 构建可执行文件
-cargo tauri build
+npm run tauri -- build
+
+# 等价命令（可选）
+# npx tauri build
 ```
 
 构建完成后，安装包位于：
@@ -221,7 +227,7 @@ if (!(Test-Path $modelPath)) {
 
 # 开发构建
 Write-Host "启动开发构建..." -ForegroundColor Yellow
-cargo tauri dev
+npm run tauri -- dev
 ```
 
 运行：
@@ -241,7 +247,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 构建成功后，你可以：
 
 1. **测试基本功能**：
-   - 按热键（默认 Ctrl+Shift+S）开始录音
+   - 按热键（默认 Alt+Space）开始录音
    - 说话后松开，看是否能识别并输入文字
 
 2. **配置设置**：
@@ -262,6 +268,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
      ```
    - 或在 `Settings → Language & Region` 中添加中文语言包
    - 中文 OCR 引擎天然支持中英文混合识别（代码、注释、网页等）
+   - 在应用设置中，选择 `Screen OCR → Windows Built-in / 系统内置`
 
 ---
 
@@ -293,6 +300,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 如果遇到问题：
 
-1. 查看 `src-tauri/target/release/VoiceInput.log` 日志文件
-2. 在终端运行 `cargo tauri dev` 查看实时输出
+1. 查看 `%APPDATA%\VoiceInput\logs\VoiceInput.log` 日志文件
+2. 在终端运行 `npm run tauri -- dev` 查看实时输出
 3. 检查模型路径是否正确

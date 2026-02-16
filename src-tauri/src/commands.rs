@@ -28,6 +28,11 @@ pub fn get_amplitude(state: State<'_, AppState>) -> f32 {
     state.audio_buffer.get_amplitude()
 }
 
+#[tauri::command]
+pub fn get_platform() -> String {
+    std::env::consts::OS.to_string()
+}
+
 // ── Config commands ──
 
 #[tauri::command]

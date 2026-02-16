@@ -464,8 +464,9 @@ cargo tauri build --target aarch64-apple-darwin
 - ✅ Screenshot 跨平台抽象
 - ✅ Permissions Windows stub
 - ✅ lib.rs Windows 兼容
+- ✅ 前端设置界面平台文案适配（`macOS Built-in` / `Windows Built-in` 动态显示）
+- ✅ 设置页提示路径平台化（macOS 与 Windows 分别提示）
 
 ### 待完成
 - ⏳ Vision 模型支持 (Phase 2)
 - ⏳ Windows 构建测试
-- ⏳ 前端设置界面更新

@@ -162,6 +162,7 @@ pub fn run() {
             commands::start_recording,
             commands::stop_recording_and_transcribe,
             commands::get_amplitude,
+            commands::get_platform,
             commands::show_window,
             commands::hide_window,
             commands::get_config,

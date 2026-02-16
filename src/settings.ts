@@ -26,6 +26,8 @@ interface AppConfig {
   ocr_model: string;
 }
 
+type AppPlatform = "macos" | "windows" | "linux" | "unknown";
+
 // ── DOM refs ──
 const shortcutInput = () => document.getElementById("shortcut") as HTMLInputElement;
 const shortcutClear = () => document.getElementById("shortcut-clear") as HTMLButtonElement;
@@ -40,11 +42,37 @@ const apiSettings = () => document.getElementById("api-settings") as HTMLElement
 const polishPromptSection = () => document.getElementById("polish-prompt-section") as HTMLElement;
 const screenshotHint = () => document.getElementById("screenshot-hint") as HTMLElement;
 const visionHint = () => document.getElementById("vision-hint") as HTMLElement;
+const visionNativeLabel = () => document.getElementById("vision-native-label") as HTMLElement;
 const ocrSettings = () => document.getElementById("ocr-settings") as HTMLElement;
 const ocrEndpoint = () => document.getElementById("ocr-endpoint") as HTMLInputElement;
 const ocrModel = () => document.getElementById("ocr-model") as HTMLInputElement;
 const btnSave = () => document.getElementById("btn-save") as HTMLButtonElement;
 let originalConfig: AppConfig | null = null;
+let currentPlatform: AppPlatform = "unknown";
+
+async function detectPlatform() {
+  try {
+    const p = (await invoke("get_platform")) as string;
+    if (p === "macos" || p === "windows" || p === "linux") {
+      currentPlatform = p;
+      return;
+    }
+  } catch (e) {
+    console.warn("Failed to detect platform:", e);
+  }
+  currentPlatform = "unknown";
+}
+
+function updateVisionNativeLabel() {
+  const label = visionNativeLabel();
+  if (currentPlatform === "windows") {
+    label.textContent = "Windows Built-in / 系统内置 ⭐";
+  } else if (currentPlatform === "macos") {
+    label.textContent = "macOS Built-in / 系统内置 ⭐";
+  } else {
+    label.textContent = "Native Built-in / 系统内置 ⭐";
+  }
+}
 
 // ── Shortcut key recorder ──
 
@@ -254,7 +282,13 @@ function updateScreenshotHint() {
   if (screenshotMode === "disabled") {
     hint.textContent = "";
   } else if (screenshotMode === "save") {
-    hint.textContent = "Screenshots will be saved to ~/Library/Application Support/com.mac-voice-input/screenshots/";
+    if (currentPlatform === "windows") {
+      hint.textContent = "Screenshots will be saved to %APPDATA%/com.mac-voice-input/screenshots/";
+    } else if (currentPlatform === "macos") {
+      hint.textContent = "Screenshots will be saved to ~/Library/Application Support/com.mac-voice-input/screenshots/";
+    } else {
+      hint.textContent = "Screenshots will be saved to the app data screenshots folder.";
+    }
   } else if (screenshotMode === "api") {
     if (visionMode !== "disabled") {
       hint.textContent = "✓ Screenshot → OCR → screen context injected into AI polishing prompt for homophone correction.";
@@ -305,9 +339,14 @@ function updateVisionVisibility() {
     ocr.classList.add("hidden");
     hint.textContent = "";
   } else if (mode === "native") {
-    // macOS built-in Vision framework — no configuration needed
     ocr.classList.add("hidden");
-    hint.textContent = "Using macOS built-in text recognition (fast, no setup required)";
+    if (currentPlatform === "windows") {
+      hint.textContent = "Using Windows built-in text recognition (fast; install OCR language pack if needed)";
+    } else if (currentPlatform === "macos") {
+      hint.textContent = "Using macOS built-in text recognition (fast, no setup required)";
+    } else {
+      hint.textContent = "Using built-in system text recognition";
+    }
   } else {
     // Ollama API OCR — show endpoint/model config
     ocr.classList.remove("hidden");
@@ -503,6 +542,8 @@ async function saveConfig() {
 // ── Init ──
 
 window.addEventListener("DOMContentLoaded", async () => {
+  await detectPlatform();
+  updateVisionNativeLabel();
   setupPolishRadios();
   setupScreenshotRadios();
   setupVisionRadios();
