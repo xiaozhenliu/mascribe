@@ -15,6 +15,29 @@
 当前版本不会自动下载语音模型。  
 如果缺少模型文件，语音转写会失败。
 
+### 1) 一键安装模型（推荐）
+
+打开 Terminal，进入仓库目录后执行：
+
+```bash
+./scripts/install-sensevoice-model.sh
+```
+
+脚本会自动下载并安装到默认目录。
+
+### 1.1 只有 DMG、没有源码时
+
+直接执行下面命令：
+
+```bash
+mkdir -p ~/.openclaw/models/sensevoice
+cd ~/.openclaw/models/sensevoice
+curl -L -o sensevoice.tar.bz2 \
+  https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2
+tar -xjf sensevoice.tar.bz2
+rm -f sensevoice.tar.bz2
+```
+
 默认模型目录：
 
 `~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/`
@@ -24,11 +47,15 @@
 - `model.int8.onnx`
 - `tokens.txt`
 
-检查命令：
+### 2) 检查是否安装成功
+
+执行：
 
 ```bash
 ls ~/.openclaw/models/sensevoice/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/{model.int8.onnx,tokens.txt}
 ```
+
+如果能看到这两个文件路径，说明模型已可用。
 
 ---
 
