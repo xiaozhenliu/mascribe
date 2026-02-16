@@ -4,28 +4,29 @@ All notable changes to MaScribe are documented here.
 
 ## Unreleased
 
+## 0.3.0 - 2026-02-16
+
 ### Added
-- **Native cross-platform OCR** — macOS: `VNRecognizeTextRequest` via Neural Engine (~0.6s); Windows: `Windows.Media.Ocr` WinRT API (~50-200ms, same engine as PowerToys Text Extractor). Both handle mixed Chinese/English/code text natively. Zero external dependencies
-- **Screen OCR context** — Two-step pipeline: screenshot → OCR extracts screen text → injected into AI polishing prompt for homophone correction (e.g., "把" vs "八")
-- **OCR settings** — Three modes: "macOS Built-in" (native, recommended), "Ollama OCR" (GLM-OCR), or "Disabled"
-- **Launch at Login** — "Launch at Login" checkbox in tray menu via `tauri-plugin-autostart` (macOS Login Items)
-- **Correction dictionary** — Settings UI for managing auto-replace rules (from → to), applied after transcription
-- **Shortcut presets** — Dropdown for special keys (ContextMenu, F13–F15) that can't be captured via keydown
-- **Sticky settings header** — Header stays visible while scrolling long settings page
+- Native cross-platform OCR support (`macOS Vision` / `Windows.Media.Ocr`) and screenshot context injection into online AI polishing.
+- Launch-at-login toggle in tray menu.
+- Correction dictionary UI and save/load support in Settings.
+- Special hotkey presets (`ContextMenu`, `F13`–`F15`) with native fallback listener.
+- Security secret scanning workflow with `gitleaks` (`npm run security:secrets`).
+- User-facing platform guides: `docs/macos-guide.md` and streamlined Windows guide.
 
 ### Changed
-- **Polish prompt restructured** — Transcript and OCR context are now clearly labeled with `[TRANSCRIPT START/END]` and `[SCREEN CONTEXT]` markers, preventing models from regurgitating OCR content
-- **Output length validation** — Online API responses exceeding 3× input length + 20 chars are rejected (falls back to raw transcript), preventing OCR content leakage
-- **Settings window** — Now resizable with minimum size constraint; removed Cancel button (close window instead)
-- **Vision → Screen OCR** — Renamed "Vision Model" settings to "Screen OCR"; removed local vision model option (stub), replaced with practical OCR-only pipeline
-- **Hotkey event swallowing** — CGEventTap changed from `ListenOnly` to `Default` mode, returns `None` on match to prevent hotkey from leaking to other apps
-- **Local polish context size** — Bumped llama-cpp context/batch from 1024/512 to 2048/2048
-- **API error logging** — Online polisher now extracts and logs HTTP response body on errors (up to 300 chars) for easier debugging of model name / endpoint issues
+- Rebranded product from Voice Input to **MaScribe** (app name, bundle id, paths, docs).
+- Unified app identifier to `com.mascribe` and updated config/data paths accordingly.
+- Settings UI upgraded to clean bilingual mode (`中文 / English`) with language switching.
+- Screen OCR options and hints are now platform-aware (`macOS Built-in` / `Windows Built-in`).
+- Windows setup documentation simplified to user-first install + permission flow.
+- README simplified to reduce mixed-language clutter and unnecessary technical details.
 
 ### Fixed
-- **Online polisher crash** — `#[serde(flatten)]` on `ChatMessage.content` caused panic when serializing `ChatContent::Text(String)` via ureq; replaced with regular field + explicit `serde_json::to_value()` serialization
-- **Crash on local polish with OCR** — OCR context is now only injected for online API mode; local Qwen 2.5 model has ~512 token batch limit, extra context caused `GGML_ASSERT` crash
-- **Floating window position** — Use `primary_monitor()` instead of `current_monitor()` (which returns None for hidden windows); add monitor position offset for multi-monitor support
+- macOS paste failure diagnostics improved with explicit accessibility/fallback logging.
+- Online polisher serialization crash fixed (`ChatContent` request serialization).
+- OCR context injection restricted to online API polishing to avoid local model context overflow.
+- Floating window positioning made stable across hidden window / multi-monitor scenarios.
 
 ### Known Issues
 - **ContextMenu key triggers right-click in some apps** — On macOS, the ContextMenu key (mapped to F16) can trigger a right-click context menu in certain apps (e.g. Terminal). The hotkey itself works correctly, but the right-click side effect cannot be suppressed via CGEventTap as the event goes through a different system path. Other apps (browsers, editors) are unaffected.

@@ -1,6 +1,6 @@
 [package]
 name = "mascribe"
-version = "0.2.0"
+version = "0.3.0"
 description = "Cross-platform speech-to-text app with local SenseVoice transcription"
 authors = ["you"]
 edition = "2021"
