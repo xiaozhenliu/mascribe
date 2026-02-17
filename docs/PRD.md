@@ -61,8 +61,10 @@ macOS 自带的语音听写功能依赖网络且准确率有限，特别是对�
 - 位于屏幕底部居中，Dock 上方约 90px
 - 可拖拽移动
 - 全屏应用场景：
-  - 当前版本以“稳定不崩溃”为优先，允许在部分全屏 App 中存在显示限制
-  - vNext 目标：在独立 Space 的全屏应用中保持可见
+  - 悬浮窗可在全屏应用上方正常显示（v0.4.0 已实现）
+  - 实现方式：运行时将 NSWindow 通过 `object_setClass` 转换为 NSPanel，配合 `FullScreenAuxiliary` + `CanJoinAllSpaces` + `NSScreenSaverWindowLevel(1000)`
+  - 使用 `orderFrontRegardless` 代替 `makeKeyAndOrderFront:` 避免激活应用导致 Space 切换
+  - 录音开始时记住前台目标 App（pid），粘贴前自动重新激活
 
 ### 5. 菜单栏图标
 
@@ -290,6 +292,7 @@ OCR 引擎以 `zh-Hans`（中文简体）初始化时，**天然支持** ASCII �
 | arboard | 剪贴板操作 |
 | core-graphics | CGEventTap, CGEvent |
 | core-foundation | CFRunLoop |
+| objc2 / objc2-app-kit | NSPanel 转换, NSWindow 全屏覆盖 |
 | serde / serde_json | 序列化 |
 | tokio | 异步运行时 |
 | dirs | 系统目录 |
@@ -414,7 +417,7 @@ mascribe/
 ## 当前迭代约束（2026-02）
 
 - 分发策略：默认使用 `no sign` 本地构建，避免签名链路导致安装/启动不稳定
-- 稳定性优先级：先保证“可启动、可录音、可识别、结果可复制”，再推进全屏浮窗兼容
+- v0.4.0：全屏浮窗已兼容，悬浮窗可在全屏应用（如 AFFiNE、Chrome 等）上方正常显示和操作
 
 ---
 

@@ -4,6 +4,26 @@ All notable changes to MaScribe are documented here.
 
 ## Unreleased
 
+## 0.4.0 - 2026-02-17
+
+### Added
+- **Fullscreen overlay support** — Floating pill window now appears above full-screen apps (AFFiNE, Chrome, VS Code, etc.)
+  - Converts NSWindow → NSPanel at runtime via `object_setClass` for true panel behavior
+  - Uses `orderFrontRegardless` instead of `makeKeyAndOrderFront:` to avoid Space switching
+  - Window level set to `NSScreenSaverWindowLevel` (1000) to float above fullscreen windows
+  - Collection behaviors: `CanJoinAllSpaces`, `FullScreenAuxiliary`, `Transient`, `Stationary`
+- **Paste target tracking** — Records the frontmost app before recording starts, re-activates it before Cmd+V paste to ensure text goes to the correct app even with overlay visible
+- **On-demand accessibility permission prompt** — If Accessibility permission is missing at paste time, actively prompts the user instead of silently failing
+
+### Changed
+- `show_window` bypasses Tauri's `window.show()` (which calls `makeKeyAndOrderFront:` causing Space switches) in favor of native `orderFrontRegardless` via ObjC
+- Fullscreen overlay flags applied both at app startup and on each `show_window` call for resilience
+- Added `objc2-app-kit` dependency for type-safe NSWindow/NSPanel/NSRunningApplication APIs
+
+### Fixed
+- Window not visible on fullscreen Spaces due to Tauri's `set_visible_on_all_workspaces()` and `set_always_on_top()` overwriting raw ObjC collection behavior and window level
+- Window positioned off-screen (Y=-540) when using `setFrameTopLeftPoint` with physical pixel coordinates instead of AppKit's bottom-left-origin logical points
+
 ## 0.3.2 - 2026-02-16
 
 ### Added

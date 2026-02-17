@@ -8,7 +8,7 @@ English | [中文](README.md)
 
 MaScribe is a local voice-input app. Press a hotkey, speak, and your text is inserted at the current cursor position automatically.
 
-Current release: `v0.3.2`
+Current release: `v0.4.0`
 
 ## Features
 
@@ -16,6 +16,7 @@ Current release: `v0.3.2`
 - Multilingual transcription (including mixed Chinese/English)
 - AI polishing (local model or online API)
 - Screenshot OCR context for better correction
+- Works in full-screen apps (v0.4.0+)
 
 ## Platform Support
 
