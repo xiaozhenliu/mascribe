@@ -10,9 +10,101 @@ use crate::state::AppState;
 #[tauri::command]
 pub fn show_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("main") {
+        // On macOS we MUST NOT call Tauri's window.show() because tao
+        // implements it via makeKeyAndOrderFront: which activates the app
+        // and can pull the user out of a full-screen Space.
+        // Instead we use orderFrontRegardless via native ObjC API.
+        #[cfg(target_os = "macos")]
+        {
+            // Reposition to the monitor under cursor (PhysicalPosition handles
+            // the coordinate conversion correctly — unlike raw setFrameTopLeftPoint
+            // which uses the AppKit bottom-left-origin point coordinate system).
+            if let Ok(cursor) = window.cursor_position() {
+                if let Ok(Some(monitor)) = window.monitor_from_point(cursor.x, cursor.y) {
+                    let screen = monitor.size();
+                    let scale = monitor.scale_factor();
+                    let mon_pos = monitor.position();
+                    let win_w = 260.0;
+                    let win_h = 100.0;
+                    let x = mon_pos.x as f64 + (screen.width as f64 - win_w * scale) / 2.0;
+                    let y = mon_pos.y as f64 + screen.height as f64 - (win_h + 80.0) * scale;
+                    let _ = window.set_position(tauri::PhysicalPosition::new(x as i32, y as i32));
+                    println!(
+                        "[show_window] repositioned to ({}, {})",
+                        x as i32, y as i32
+                    );
+                }
+            }
+
+            // Show via native API — orderFrontRegardless doesn't activate
+            // the app, so the user stays in the full-screen Space.
+            let closure_win = window.clone();
+            let _ = window.run_on_main_thread(move || {
+                show_overlay_on_main_thread(&closure_win);
+            });
+        }
+
+        #[cfg(not(target_os = "macos"))]
         window.show().map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+/// Show the floating overlay via native NSWindow API (main-thread only).
+///
+/// This replaces Tauri's `window.show()` which calls `makeKeyAndOrderFront:`
+/// — that activates the app and can switch the user away from a full-screen
+/// Space.  We use `orderFrontRegardless` instead, which places the window on
+/// the *current* Space (including full-screen) without activation.
+#[cfg(target_os = "macos")]
+fn show_overlay_on_main_thread(window: &tauri::WebviewWindow) {
+    use objc2_app_kit::{
+        NSScreenSaverWindowLevel, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
+    };
+
+    let ns_window_ptr = match window.ns_window() {
+        Ok(ptr) => ptr as *mut NSWindow,
+        Err(e) => {
+            println!("[show_window] failed to get ns_window: {}", e);
+            return;
+        }
+    };
+
+    unsafe {
+        // Ensure the window is an NSPanel (may already be from setup,
+        // but re-assert in case anything reconstructed the window).
+        let panel_cls = objc2::runtime::AnyClass::get(c"NSPanel");
+        if let Some(cls) = panel_cls {
+            objc2::ffi::object_setClass(
+                ns_window_ptr as *mut objc2::ffi::objc_object,
+                cls as *const objc2::runtime::AnyClass as *const objc2::ffi::objc_class,
+            );
+        }
+
+        let ns = &*ns_window_ptr;
+
+        // ── Style ──
+        let mut style = ns.styleMask();
+        style.insert(NSWindowStyleMask::NonactivatingPanel);
+        style.insert(NSWindowStyleMask::UtilityWindow);
+        ns.setStyleMask(style);
+
+        // ── Collection behavior ──
+        let mut behavior = NSWindowCollectionBehavior::empty();
+        behavior.insert(NSWindowCollectionBehavior::CanJoinAllSpaces);
+        behavior.insert(NSWindowCollectionBehavior::FullScreenAuxiliary);
+        behavior.insert(NSWindowCollectionBehavior::Transient);
+        behavior.insert(NSWindowCollectionBehavior::Stationary);
+        ns.setCollectionBehavior(behavior);
+
+        // ── Window level (1000 — above full-screen apps) ──
+        ns.setLevel(NSScreenSaverWindowLevel);
+        ns.setHidesOnDeactivate(false);
+
+        // ── Show without activating ──
+        ns.orderFrontRegardless();
+    }
+    println!("[show_window] overlay shown via orderFrontRegardless");
 }
 
 #[tauri::command]
@@ -123,6 +215,7 @@ static ACTIVE_STREAM: std::sync::Mutex<StreamHolder> =
 #[tauri::command]
 pub fn start_recording(state: State<'_, AppState>) -> Result<(), String> {
     println!("[start_recording] called");
+    crate::insertion::remember_frontmost_target_app();
     let stream = AudioCapture::start(&state.audio_buffer).map_err(|e| {
         println!("[start_recording] ERROR: {}", e);
         e.to_string()

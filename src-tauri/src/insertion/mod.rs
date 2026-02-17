@@ -9,6 +9,12 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
+/// Remember the current frontmost app as the future paste target.
+pub fn remember_frontmost_target_app() {
+    #[cfg(target_os = "macos")]
+    macos::remember_frontmost_target_app();
+}
+
 /// Insert text into the active application by simulating paste (Ctrl+V / Cmd+V).
 ///
 /// This function:

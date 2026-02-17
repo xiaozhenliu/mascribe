@@ -189,6 +189,69 @@ pub fn run() {
                 // creating an ugly, irregular "ghost frame" artifact.
                 let _ = window.set_shadow(false);
 
+                // Apply fullscreen-overlay flags via native API (we're on the main
+                // thread during setup, so no run_on_main_thread dispatch needed).
+                // IMPORTANT: Do NOT use Tauri's set_visible_on_all_workspaces() or
+                // set_always_on_top() — they overwrite our collection behavior and
+                // window level, stripping FullScreenAuxiliary and lowering the level
+                // from NSScreenSaverWindowLevel (1000) to NSFloatingWindowLevel (3).
+                #[cfg(target_os = "macos")]
+                {
+                    use objc2_app_kit::{
+                        NSScreenSaverWindowLevel, NSWindow,
+                        NSWindowCollectionBehavior, NSWindowStyleMask,
+                    };
+
+                    if let Ok(ptr) = window.ns_window() {
+                        unsafe {
+                            // ── Convert NSWindow → NSPanel via object_setClass ──
+                            // Tao creates a custom TaoWindow (NSWindow subclass).
+                            // The macOS window server only gives true panel behavior
+                            // (appearing above full-screen Spaces) to actual NSPanel
+                            // instances. Style mask bits alone are not enough.
+                            // NSPanel adds no ivars beyond NSWindow, so the memory
+                            // layout is compatible and this is safe.
+                            let panel_cls = objc2::runtime::AnyClass::get(c"NSPanel");
+                            if let Some(cls) = panel_cls {
+                                objc2::ffi::object_setClass(
+                                    ptr as *mut objc2::ffi::objc_object,
+                                    cls as *const objc2::runtime::AnyClass
+                                        as *const objc2::ffi::objc_class,
+                                );
+                                println!("[setup] converted NSWindow → NSPanel via object_setClass");
+                            }
+
+                            let ns = &*(ptr as *mut NSWindow);
+
+                            // Non-activating utility panel style so clicks
+                            // don't steal focus from the full-screen app
+                            let mut style = ns.styleMask();
+                            style.insert(NSWindowStyleMask::NonactivatingPanel);
+                            style.insert(NSWindowStyleMask::UtilityWindow);
+                            ns.setStyleMask(style);
+
+                            // Collection behavior for full-screen overlay:
+                            // • CanJoinAllSpaces — appear on every virtual desktop
+                            // • FullScreenAuxiliary — allowed alongside full-screen windows
+                            // • Transient — float without key focus
+                            // • Stationary — don't move during Space reorder
+                            let mut behavior = NSWindowCollectionBehavior::empty();
+                            behavior.insert(NSWindowCollectionBehavior::CanJoinAllSpaces);
+                            behavior.insert(NSWindowCollectionBehavior::FullScreenAuxiliary);
+                            behavior.insert(NSWindowCollectionBehavior::Transient);
+                            behavior.insert(NSWindowCollectionBehavior::Stationary);
+                            ns.setCollectionBehavior(behavior);
+
+                            // Level 1000 — above full-screen apps (level ~0–24)
+                            ns.setLevel(NSScreenSaverWindowLevel);
+
+                            // Don't auto-hide when another app activates
+                            ns.setHidesOnDeactivate(false);
+                        }
+                        println!("[setup] fullscreen overlay flags applied");
+                    }
+                }
+
                 // Pre-calculate position: bottom-center, ~80px above screen bottom
                 // Use primary_monitor() instead of current_monitor() because
                 // the window is hidden and may not be associated with any monitor yet.

@@ -2202,6 +2202,7 @@ dependencies = [
  "llama-cpp-2",
  "log",
  "objc2",
+ "objc2-app-kit",
  "objc2-foundation",
  "once_cell",
  "serde",
