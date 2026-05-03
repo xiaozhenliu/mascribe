@@ -240,7 +240,7 @@ body {
   border: 1px solid #d2d2d7;
   border-radius: 8px;
   background: #fff;
-  color: #1d1d1f;
+  color: #0071e3;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -248,7 +248,11 @@ body {
   flex-shrink: 0;
   width: 90px;
   text-align: center;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
+}
+
+.btn-test-sm:hover {
+  background: #f0f0f5;
 }
 
 .btn-test-sm:hover {
@@ -391,14 +395,16 @@ textarea {
   border: 1px solid #d2d2d7;
   border-radius: 8px;
   background: #fff;
+  color: #0071e3;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s;
 }
 
 .btn-small:hover {
-  background: #e8e8ed;
+  background: #f0f0f5;
 }
 
 select.btn-small {

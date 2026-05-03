@@ -397,9 +397,11 @@ async function detectOllamaModels() {
       apiModel().value = names[0];
     }
     hint.textContent = tf("detected_ollama_models", { count: names.length });
+    hint.style.color = "#34c759";
   } catch (e) {
     console.error("Detect ollama models failed:", e);
     hint.textContent = `${t("detect_ollama_models_failed")}: ${e}`;
+    hint.style.color = "#ff3b30";
   } finally {
     btn.disabled = false;
     btn.textContent = oldText;
