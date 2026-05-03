@@ -33,3 +33,11 @@ src-tauri/gen/
 .env
 .env.*
 !.env.example
+
+# User configuration files (stored in system directories, but ignore if accidentally copied here)
+config.json
+settings.json
+*.local.json
+
+# Claude Code settings
+.claude/
