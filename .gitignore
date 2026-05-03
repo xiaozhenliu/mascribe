@@ -41,3 +41,8 @@ settings.json
 
 # Claude Code settings
 .claude/
+
+# Trellis workflow & local tooling
+.trellis/
+.playwright-mcp/
+AGENTS.md

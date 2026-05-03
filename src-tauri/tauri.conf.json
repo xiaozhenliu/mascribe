@@ -42,7 +42,7 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "signingIdentity": "xzliu Dev",
+      "signingIdentity": "VoiceInput Dev",
       "entitlements": "Entitlements.plist",
       "minimumSystemVersion": "11.0",
       "frameworks": [
