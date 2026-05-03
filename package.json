@@ -1,14 +1,15 @@
 {
   "name": "mascribe",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.4.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "security:secrets": "bash scripts/gitleaks-scan.sh"
+    "security:secrets": "bash scripts/gitleaks-scan.sh",
+    "test": "vitest run"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
@@ -18,7 +19,9 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "jsdom": "^29.1.1",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vitest": "^4.1.5"
   }
 }

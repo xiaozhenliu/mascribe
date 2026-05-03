@@ -169,3 +169,94 @@ impl AppConfig {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_has_valid_values() {
+        let config = AppConfig::default();
+        assert!(!config.language.is_empty());
+        assert_eq!(config.language, "auto");
+        assert!(config.num_threads > 0);
+        assert_eq!(config.num_threads, 4);
+        assert!(config.use_itn);
+        assert!(config.polish_enabled);
+        assert_eq!(config.polish_mode, "local");
+        assert_eq!(config.shortcut, "Alt+Space");
+        assert!(!config.polish_prompt.is_empty());
+        assert_eq!(config.screenshot_mode, "disabled");
+        assert_eq!(config.screenshot_max_size, 1024);
+        assert_eq!(config.vision_mode, "disabled");
+        assert_eq!(config.ocr_endpoint, "http://localhost:11434/v1");
+        assert_eq!(config.ocr_model, "glm-ocr");
+    }
+
+    #[test]
+    fn config_serialization_roundtrip() {
+        let config = AppConfig::default();
+        let json = serde_json::to_string(&config).unwrap();
+        let restored: AppConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.language, restored.language);
+        assert_eq!(config.num_threads, restored.num_threads);
+        assert_eq!(config.shortcut, restored.shortcut);
+        assert_eq!(config.polish_mode, restored.polish_mode);
+        assert_eq!(config.api_endpoint, restored.api_endpoint);
+        assert_eq!(config.screenshot_mode, restored.screenshot_mode);
+        assert_eq!(config.ocr_model, restored.ocr_model);
+    }
+
+    #[test]
+    fn config_load_with_missing_fields_uses_defaults() {
+        let partial = r#"{"language": "en", "num_threads": 8}"#;
+        let defaults = AppConfig::default();
+        let mut value = serde_json::to_value(&defaults).unwrap();
+        if let (Some(base), Some(overlay)) = (
+            value.as_object_mut(),
+            serde_json::from_str::<serde_json::Value>(partial)
+                .unwrap()
+                .as_object(),
+        ) {
+            for (k, v) in overlay {
+                base.insert(k.clone(), v.clone());
+            }
+        }
+        let config: AppConfig = serde_json::from_value(value).unwrap();
+        // Saved values override defaults
+        assert_eq!(config.language, "en");
+        assert_eq!(config.num_threads, 8);
+        // Other fields retain defaults
+        assert_eq!(config.shortcut, "Alt+Space");
+        assert!(config.polish_enabled);
+        assert_eq!(config.ocr_model, "glm-ocr");
+    }
+
+    #[test]
+    fn config_default_polish_prompt_contains_placeholders() {
+        let config = AppConfig::default();
+        assert!(config.polish_prompt.contains("{text}"));
+        assert!(config.polish_prompt.contains("{lang}"));
+    }
+
+    #[test]
+    fn config_empty_json_gets_all_defaults() {
+        let empty = "{}";
+        let defaults = AppConfig::default();
+        let mut value = serde_json::to_value(&defaults).unwrap();
+        if let (Some(base), Some(overlay)) = (
+            value.as_object_mut(),
+            serde_json::from_str::<serde_json::Value>(empty)
+                .unwrap()
+                .as_object(),
+        ) {
+            for (k, v) in overlay {
+                base.insert(k.clone(), v.clone());
+            }
+        }
+        let config: AppConfig = serde_json::from_value(value).unwrap();
+        assert_eq!(config.language, defaults.language);
+        assert_eq!(config.num_threads, defaults.num_threads);
+        assert_eq!(config.shortcut, defaults.shortcut);
+    }
+}

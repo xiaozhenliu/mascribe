@@ -91,8 +91,8 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
                         WebviewUrl::App("settings.html".into()),
                     )
                     .title("MaScribe Settings")
-                    .inner_size(520.0, 580.0)
-                    .min_inner_size(520.0, 400.0)
+                    .inner_size(800.0, 600.0)
+                    .min_inner_size(700.0, 500.0)
                     .resizable(true)
                     .center()
                     .build()

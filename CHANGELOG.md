@@ -4,6 +4,18 @@ All notable changes to MaScribe are documented here.
 
 ## Unreleased
 
+## 0.4.3 - 2026-05-03
+
+### Added
+- **Settings page redesign** — Tab-based layout with left navigation (Basic / AI Polish / Vision / Dictionary)
+- **Testing infrastructure** — Vitest for frontend (30 tests), Rust unit tests for config and correction modules (23 tests)
+- Testing conventions documented in `.trellis/spec/testing/index.md`
+- Extracted pure utility functions (`t`, `tf`, `mapKey`, `toOllamaTagsUrl`) into `src/utils.ts` for testability
+
+### Changed
+- Settings window size increased to 800x600 (min 700x500) to accommodate tab layout
+- Settings page uses responsive layout with horizontal tabs below 700px width
+
 ## 0.4.2 - 2026-05-03
 
 ### Added

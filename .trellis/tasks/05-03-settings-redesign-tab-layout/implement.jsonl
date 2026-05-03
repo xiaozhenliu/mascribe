@@ -1,0 +1,4 @@
+{"file": "docs/settings_design.md", "reason": "Primary design reference: tab layout specs, CSS values, interaction design, responsive breakpoints"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend conventions: vanilla TS, DOM access pattern, naming, i18n, timer cleanup"}
+{"file": ".trellis/spec/rust/index.md", "reason": "Rust conventions: error handling, command registration, platform-specific code patterns"}
+{"file": ".trellis/spec/testing/index.md", "reason": "Testing conventions: tools, patterns, what to test (create this file first)"}

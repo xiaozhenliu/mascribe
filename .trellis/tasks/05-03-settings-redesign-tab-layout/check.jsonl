@@ -1,0 +1,5 @@
+{"file": "docs/settings_design.md", "reason": "Verify layout matches design spec: tab widths, colors, spacing, typography"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Verify frontend conventions followed: DOM pattern, naming, i18n"}
+{"file": ".trellis/spec/rust/index.md", "reason": "Verify Rust conventions followed: error handling, tray.rs changes"}
+{"file": ".trellis/spec/testing/index.md", "reason": "Verify testing conventions documented and tests follow them"}
+{"file": ".trellis/tasks/05-03-settings-redesign-tab-layout/prd.md", "reason": "Verify all acceptance criteria met against PRD requirements"}

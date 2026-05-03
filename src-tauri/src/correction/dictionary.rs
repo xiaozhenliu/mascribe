@@ -69,3 +69,112 @@ impl CorrectionDictionary {
         result
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apply_replaces_exact_match() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("hello".to_string(), "world".to_string()),
+        ]);
+        assert_eq!(dict.apply("hello"), "world");
+    }
+
+    #[test]
+    fn apply_is_case_insensitive() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("hello".to_string(), "world".to_string()),
+        ]);
+        assert_eq!(dict.apply("HELLO"), "world");
+        assert_eq!(dict.apply("Hello"), "world");
+        assert_eq!(dict.apply("hELLo"), "world");
+    }
+
+    #[test]
+    fn apply_preserves_surrounding_text() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("foo".to_string(), "bar".to_string()),
+        ]);
+        assert_eq!(dict.apply("before foo after"), "before bar after");
+    }
+
+    #[test]
+    fn apply_replaces_multiple_occurrences() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("cat".to_string(), "dog".to_string()),
+        ]);
+        assert_eq!(dict.apply("cat and cat"), "dog and dog");
+    }
+
+    #[test]
+    fn empty_dictionary_returns_original() {
+        let dict = CorrectionDictionary::empty();
+        assert_eq!(dict.apply("unchanged text"), "unchanged text");
+    }
+
+    #[test]
+    fn longest_match_first() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("ab".to_string(), "XY".to_string()),
+            ("abc".to_string(), "Z".to_string()),
+        ]);
+        // "abc" should match before "ab" because it's longer
+        assert_eq!(dict.apply("abc"), "Z");
+    }
+
+    #[test]
+    fn from_entries_sorts_by_length_descending() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("a".to_string(), "1".to_string()),
+            ("abc".to_string(), "3".to_string()),
+            ("ab".to_string(), "2".to_string()),
+        ]);
+        let entries = dict.entries();
+        assert_eq!(entries[0].0, "abc");
+        assert_eq!(entries[1].0, "ab");
+        assert_eq!(entries[2].0, "a");
+    }
+
+    #[test]
+    fn empty_dictionary_has_no_entries() {
+        let dict = CorrectionDictionary::empty();
+        assert!(dict.entries().is_empty());
+    }
+
+    #[test]
+    fn apply_with_chinese_text() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("你好".to_string(), "您好".to_string()),
+        ]);
+        assert_eq!(dict.apply("你好世界"), "您好世界");
+    }
+
+    #[test]
+    fn apply_no_match_returns_unchanged() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("foo".to_string(), "bar".to_string()),
+        ]);
+        assert_eq!(dict.apply("no match here"), "no match here");
+    }
+
+    #[test]
+    fn save_and_load_roundtrip() {
+        let dict = CorrectionDictionary::from_entries(vec![
+            ("hello".to_string(), "world".to_string()),
+            ("foo".to_string(), "bar".to_string()),
+        ]);
+        let tmp = std::env::temp_dir().join("mascribe_test_dict.json");
+        dict.save(&tmp).unwrap();
+
+        let loaded = CorrectionDictionary::load(&tmp).unwrap();
+        // After load (which sorts by length), entries should contain both pairs
+        assert_eq!(loaded.entries().len(), 2);
+        assert_eq!(dict.apply("hello"), "world");
+        assert_eq!(dict.apply("foo"), "bar");
+
+        // Cleanup
+        let _ = std::fs::remove_file(&tmp);
+    }
+}
