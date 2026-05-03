@@ -58,7 +58,7 @@ const visionNativeLabel = () => document.getElementById("vision-native-label") a
 const ocrSettings = () => document.getElementById("ocr-settings") as HTMLElement;
 const ocrEndpoint = () => document.getElementById("ocr-endpoint") as HTMLInputElement;
 const ocrModel = () => document.getElementById("ocr-model") as HTMLInputElement;
-const languageSelect = () => document.getElementById("language-select") as HTMLSelectElement;
+const langToggle = () => document.getElementById("lang-toggle") as HTMLButtonElement;
 const btnSave = () => document.getElementById("btn-save") as HTMLButtonElement;
 let originalConfig: AppConfig | null = null;
 let currentPlatform: AppPlatform = "unknown";
@@ -144,6 +144,7 @@ function applyLanguage() {
   updateVisionVisibility();
   updateScreenshotHint();
   renderCorrections();
+  updateLangToggleLabel();
 }
 
 async function detectPlatform() {
@@ -169,12 +170,16 @@ function detectUiLanguage() {
   currentUiLang = navLang.startsWith("zh") ? "zh" : "en";
 }
 
+function updateLangToggleLabel() {
+  langToggle().textContent = currentUiLang === "zh" ? "EN" : "中";
+}
+
 function setupLanguageSelector() {
-  const select = languageSelect();
-  select.value = currentUiLang;
-  select.addEventListener("change", () => {
-    currentUiLang = select.value === "zh" ? "zh" : "en";
+  updateLangToggleLabel();
+  langToggle().addEventListener("click", () => {
+    currentUiLang = currentUiLang === "zh" ? "en" : "zh";
     localStorage.setItem("settings_lang", currentUiLang);
+    updateLangToggleLabel();
     applyLanguage();
   });
 }

@@ -41,6 +41,24 @@ body {
   margin: 0;
 }
 
+.lang-toggle {
+  padding: 4px 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 6px;
+  background: #fff;
+  color: #0071e3;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 36px;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.lang-toggle:hover {
+  background: #f0f0f5;
+}
+
 /* ── Tab body: nav + content side by side ── */
 .tab-body {
   flex: 1;

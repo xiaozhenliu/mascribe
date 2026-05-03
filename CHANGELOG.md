@@ -4,6 +4,24 @@ All notable changes to MaScribe are documented here.
 
 ## Unreleased
 
+## 0.4.4 - 2026-05-03
+
+### Changed
+- Language selector changed from dropdown to ZH|EN toggle button
+- Split AI Polish tab into "AI Engine" and "Prompt" tabs (5 tabs total)
+- Redesigned API settings card: inline buttons, compact test connection layout
+- Removed redundant labels ("Online API Settings", "Local Model Settings")
+- Expanded prompt textarea to fill tab without scrolling
+
+### Fixed
+- Radio group white line at bottom caused by `.field label` margin leak
+- Test connection button width for English text overflow
+- Detect ollama hint auto-clears after 15 seconds
+- Enabled `tauri-plugin-opener` for "Setup Guide" button
+
+### Added
+- tauri-plugin-opener for opening external URLs from settings
+
 ## 0.4.3 - 2026-05-03
 
 ### Added

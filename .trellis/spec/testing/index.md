@@ -214,6 +214,57 @@ mod tests {
 
 ---
 
+## UI Verification (Playwright)
+
+### Preferred: DOM Snapshot over Screenshots
+
+Use Playwright's `browser_snapshot` for automated UI verification. DOM snapshots are more reliable than visual screenshots:
+
+- **Deterministic**: no pixel-level rendering differences between environments
+- **Queryable**: check specific elements, text, attributes, classes
+- **Fast**: no image encoding/decoding overhead
+- **Model-agnostic**: works regardless of whether the AI model supports image input
+
+### When to Use Each
+
+| Method | Use When |
+|--------|----------|
+| `browser_snapshot` | Verifying DOM structure, text content, form values, element states |
+| `browser_take_screenshot` | Visual regression testing, layout verification (requires model with image support) |
+| Manual user verification | Visual polish, color accuracy, animation feel |
+
+### Snapshot Verification Pattern
+
+```yaml
+# From browser_snapshot output, verify:
+- Tab buttons exist with correct labels
+- Active tab has correct data-tab attribute
+- Input fields have expected values (from loaded config)
+- Hidden/shown sections match current state
+- i18n labels updated correctly
+```
+
+### Mocking Tauri invoke for Browser Testing
+
+Tauri's `invoke()` doesn't work in a regular browser. Use `page.addInitScript()` to mock it before page load:
+
+```ts
+await page.addInitScript(() => {
+  window.__TAURI_INTERNALS__ = window.__TAURI_INTERNALS__ || {};
+  window.__TAURI_INTERNALS__.invoke = async (cmd) => {
+    if (cmd === 'get_config') return { /* mock config */ };
+    if (cmd === 'get_platform') return 'macos';
+    if (cmd === 'get_corrections') return [['from', 'to']];
+    return null;
+  };
+});
+await page.goto('http://localhost:1420/settings.html');
+```
+
+Note: The mock must be injected via `addInitScript` (runs before page scripts), not `evaluate` (runs after).
+
+---
+
 ## Running Tests
 
 | Scope | Command | Directory |
