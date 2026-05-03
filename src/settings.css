@@ -259,6 +259,25 @@ textarea {
   min-height: 120px;
 }
 
+/* ── Prompt tab: textarea fills available space ── */
+.tab-panel.active[data-tab="prompt"] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tab-panel[data-tab="prompt"] .field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tab-panel[data-tab="prompt"] textarea {
+  flex: 1;
+  min-height: 0;
+}
+
 /* ── Shortcut input ── */
 .shortcut-row {
   display: flex;
