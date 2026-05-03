@@ -398,14 +398,20 @@ async function detectOllamaModels() {
     }
     hint.textContent = tf("detected_ollama_models", { count: names.length });
     hint.style.color = "#34c759";
+    scheduleHintClear(hint);
   } catch (e) {
     console.error("Detect ollama models failed:", e);
     hint.textContent = `${t("detect_ollama_models_failed")}: ${e}`;
     hint.style.color = "#ff3b30";
+    scheduleHintClear(hint);
   } finally {
     btn.disabled = false;
     btn.textContent = oldText;
   }
+}
+
+function scheduleHintClear(el: HTMLElement) {
+  setTimeout(() => { el.textContent = ""; el.style.color = ""; }, 15000);
 }
 
 function setupOllamaModelDetection() {
