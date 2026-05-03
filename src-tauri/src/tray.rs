@@ -3,6 +3,7 @@ use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, Predefined
 use tauri::tray::TrayIconBuilder;
 use tauri::{ActivationPolicy, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_dialog::DialogExt;
 
 pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Check current autostart state
@@ -12,6 +13,10 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
     let launch_at_login = CheckMenuItemBuilder::new("Launch at Login")
         .id("launch-at-login")
         .checked(is_autostart)
+        .build(app)?;
+
+    let about_item = MenuItemBuilder::new("About MaScribe")
+        .id("about")
         .build(app)?;
 
     let settings_item = MenuItemBuilder::new("Settings...")
@@ -25,7 +30,7 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
     let separator = PredefinedMenuItem::separator(app)?;
 
     let menu = MenuBuilder::new(app)
-        .items(&[&launch_at_login, &separator, &settings_item, &separator, &quit_item])
+        .items(&[&launch_at_login, &about_item, &separator, &settings_item, &separator, &quit_item])
         .build()?;
 
     // Use dedicated tray icon (black outline, transparent background)
@@ -49,6 +54,22 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
                     let _ = manager.enable();
                     println!("[tray] Autostart enabled");
                 }
+            }
+            "about" => {
+                println!("[tray] About selected");
+                let version = env!("CARGO_PKG_VERSION");
+                let git_branch = env!("GIT_BRANCH");
+                let git_commit = env!("GIT_COMMIT");
+
+                let message = format!(
+                    "MaScribe v{}\n\nBranch: {}\nCommit: {}",
+                    version, git_branch, git_commit
+                );
+
+                let _ = app.dialog()
+                    .message(message)
+                    .title("About MaScribe")
+                    .blocking_show();
             }
             "settings" => {
                 println!("[tray] Settings selected");

@@ -4,6 +4,11 @@ All notable changes to MaScribe are documented here.
 
 ## Unreleased
 
+## 0.4.2 - 2026-05-03
+
+### Added
+- About menu item in tray menu displaying app version, Git branch, and commit hash
+
 ## 0.4.1 - 2026-05-03
 
 ### Changed
