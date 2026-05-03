@@ -196,8 +196,63 @@ body {
   border-radius: 8px;
 }
 
-.api-settings > label {
+.api-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.api-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.hint-inline {
+  font-size: 11px;
+  color: #34c759;
+  margin-left: 8px;
+}
+
+.hint-inline:empty {
   display: none;
+}
+
+.api-test-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e8e8ed;
+  text-align: center;
+}
+
+.btn-test {
+  padding: 10px 32px;
+  border: none;
+  border-radius: 8px;
+  background: #0071e3;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-test:hover {
+  background: #0077ed;
+}
+
+.btn-test:active {
+  transform: scale(0.97);
+}
+
+.btn-test:disabled {
+  background: #a0c4f1;
+  cursor: not-allowed;
+}
+
+.api-test-hint {
+  text-align: center;
+  margin-top: 8px;
 }
 
 .api-field {

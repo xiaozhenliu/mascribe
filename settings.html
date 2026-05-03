@@ -93,8 +93,13 @@
             </section>
 
             <section id="api-settings" class="field api-settings hidden">
-              <label id="label-api-settings">Online API Settings</label>
-              <p id="hint-api-settings" class="hint">OpenAI-compatible endpoint. Setup guide: docs/online-api-guide-en.md | docs/online-api-guide-zh.md</p>
+              <div class="api-header">
+                <div class="api-header-actions">
+                  <button id="api-guide-btn" class="btn-small" type="button">配置指南</button>
+                  <button id="detect-ollama-models-btn" class="btn-small" type="button">加载模型</button>
+                </div>
+              </div>
+              <p id="hint-api-settings" class="hint">OpenAI-compatible endpoint <span id="detect-ollama-models-hint" class="hint-inline"></span></p>
               <div class="api-field">
                 <span id="api-endpoint-label" class="api-label">Endpoint</span>
                 <input type="text" id="api-endpoint" placeholder="https://api.deepseek.com/v1" />
@@ -108,18 +113,13 @@
                 <input type="text" id="api-model" list="api-model-suggestions" placeholder="deepseek-chat" />
                 <datalist id="api-model-suggestions"></datalist>
               </div>
-              <div class="api-field">
-                <button id="detect-ollama-models-btn" class="btn-small" type="button">Detect Ollama Models</button>
+              <div class="api-test-section">
+                <button id="test-api-connection-btn" class="btn-test" type="button">Test Connection</button>
+                <p id="test-api-connection-hint" class="hint api-test-hint"></p>
               </div>
-              <p id="detect-ollama-models-hint" class="hint"></p>
-              <div class="api-field">
-                <button id="test-api-connection-btn" class="btn-small" type="button">Test Connection</button>
-              </div>
-              <p id="test-api-connection-hint" class="hint"></p>
             </section>
 
             <section id="local-polish-settings" class="field hidden">
-              <label id="label-local-polish-settings" for="polish-model-path">Local Model Settings</label>
               <p id="hint-local-polish-settings" class="hint">
                 Local mode expects a GGUF file path. Recommended: Qwen2.5-1.5B-Instruct GGUF.
               </p>

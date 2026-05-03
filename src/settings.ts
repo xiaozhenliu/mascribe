@@ -48,6 +48,7 @@ const detectOllamaModelsBtn = () => document.getElementById("detect-ollama-model
 const detectOllamaModelsHint = () => document.getElementById("detect-ollama-models-hint") as HTMLElement;
 const testApiConnectionBtn = () => document.getElementById("test-api-connection-btn") as HTMLButtonElement;
 const testApiConnectionHint = () => document.getElementById("test-api-connection-hint") as HTMLElement;
+const apiGuideBtn = () => document.getElementById("api-guide-btn") as HTMLButtonElement;
 const apiSettings = () => document.getElementById("api-settings") as HTMLElement;
 const localPolishSettings = () => document.getElementById("local-polish-settings") as HTMLElement;
 const polishPromptSection = () => document.getElementById("polish-prompt-section") as HTMLElement;
@@ -101,9 +102,8 @@ function applyLanguage() {
   setText("polish-off", "polish_off");
   setText("polish-local", "polish_local");
   setText("polish-api", "polish_api");
-  setText("label-api-settings", "api_settings_label");
   setText("hint-api-settings", "api_settings_hint");
-  setText("label-local-polish-settings", "local_polish_settings_label");
+  setText("api-guide-btn", "api_guide_btn");
   setText("hint-local-polish-settings", "local_polish_settings_hint");
   setText("hint-local-polish-ollama", "local_polish_ollama_hint");
   setPlaceholder("polish-model-path", "local_polish_model_path_placeholder");
@@ -409,6 +409,19 @@ async function detectOllamaModels() {
 function setupOllamaModelDetection() {
   detectOllamaModelsBtn().addEventListener("click", () => {
     void detectOllamaModels();
+  });
+}
+
+function setupApiGuide() {
+  apiGuideBtn().addEventListener("click", async () => {
+    const lang = currentUiLang === "zh" ? "zh" : "en";
+    const url = `https://github.com/user/mascribe/blob/main/docs/online-api-guide-${lang}.md`;
+    try {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl(url);
+    } catch {
+      window.open(url, "_blank");
+    }
   });
 }
 
@@ -805,6 +818,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   setupTabs();
   setupPolishRadios();
   setupOllamaModelDetection();
+  setupApiGuide();
   setupApiConnectionTest();
   setupScreenshotRadios();
   setupVisionRadios();
