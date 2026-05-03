@@ -230,19 +230,24 @@ body {
 }
 
 .api-model-input {
-  flex: 0 0 60% !important;
+  flex: 1;
+  min-width: 0;
 }
 
 .btn-test-sm {
-  padding: 6px 14px;
+  padding: 0 12px;
+  height: 34px;
   border: 1px solid #d2d2d7;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #fff;
   color: #1d1d1f;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
+  width: 90px;
+  text-align: center;
   transition: background 0.15s, border-color 0.15s;
 }
 
