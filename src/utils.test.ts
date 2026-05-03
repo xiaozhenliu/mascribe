@@ -60,7 +60,7 @@ describe("I18N dictionary", () => {
   });
 
   it("should have tab labels in both languages", () => {
-    const tabKeys = ["tab_basic", "tab_polish", "tab_vision", "tab_dictionary"];
+    const tabKeys = ["tab_basic", "tab_polish", "tab_vision", "tab_dictionary", "tab_prompt"];
     for (const key of tabKeys) {
       expect(I18N.en[key]).toBeDefined();
       expect(I18N.zh[key]).toBeDefined();

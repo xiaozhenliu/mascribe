@@ -39,6 +39,7 @@ const browseBtn = () => document.getElementById("browse-btn") as HTMLButtonEleme
 const polishModelPath = () => document.getElementById("polish-model-path") as HTMLInputElement;
 const polishModelBrowseBtn = () => document.getElementById("polish-model-browse-btn") as HTMLButtonElement;
 const polishPrompt = () => document.getElementById("polish-prompt") as HTMLTextAreaElement;
+const promptDisabledHint = () => document.getElementById("prompt-disabled-hint") as HTMLElement;
 const apiEndpoint = () => document.getElementById("api-endpoint") as HTMLInputElement;
 const apiKey = () => document.getElementById("api-key") as HTMLInputElement;
 const apiModel = () => document.getElementById("api-model") as HTMLInputElement;
@@ -135,8 +136,10 @@ function applyLanguage() {
   setText("btn-save", "save");
   setText("tab-label-basic", "tab_basic");
   setText("tab-label-polish", "tab_polish");
+  setText("tab-label-prompt", "tab_prompt");
   setText("tab-label-vision", "tab_vision");
   setText("tab-label-dictionary", "tab_dictionary");
+  setText("prompt-disabled-hint", "prompt_disabled_hint");
   updateVisionNativeLabel();
   updateVisionVisibility();
   updateScreenshotHint();
@@ -325,20 +328,24 @@ function updatePolishVisibility() {
   const api = apiSettings();
   const local = localPolishSettings();
   const prompt = polishPromptSection();
+  const hint = promptDisabledHint();
 
   if (!enabled) {
     api.classList.add("hidden");
     local.classList.add("hidden");
     prompt.classList.add("hidden");
+    hint.classList.remove("hidden");
   } else if (mode === "api") {
     api.classList.remove("hidden");
     local.classList.add("hidden");
     prompt.classList.remove("hidden");
+    hint.classList.add("hidden");
   } else {
     // local mode
     api.classList.add("hidden");
     local.classList.remove("hidden");
     prompt.classList.remove("hidden");
+    hint.classList.add("hidden");
   }
 }
 
@@ -673,7 +680,7 @@ function showToast(message: string, type: "success" | "error") {
 
 // ── Tab navigation ──
 
-const VALID_TABS = ["basic", "polish", "vision", "dictionary"] as const;
+const VALID_TABS = ["basic", "polish", "prompt", "vision", "dictionary"] as const;
 type TabId = (typeof VALID_TABS)[number];
 
 function setupTabs() {

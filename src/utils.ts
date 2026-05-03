@@ -81,6 +81,8 @@ export const I18N: Record<UiLang, Record<string, string>> = {
     tab_polish: "AI Polish",
     tab_vision: "Vision",
     tab_dictionary: "Dictionary",
+    tab_prompt: "Prompt",
+    prompt_disabled_hint: "Enable AI Polish in the Engine tab first.",
   },
   zh: {
     page_title: "设置",
@@ -160,6 +162,8 @@ export const I18N: Record<UiLang, Record<string, string>> = {
     tab_polish: "AI 润色",
     tab_vision: "视觉",
     tab_dictionary: "词典",
+    tab_prompt: "提示词",
+    prompt_disabled_hint: "请先在引擎标签页启用 AI 润色。",
   },
 };
 

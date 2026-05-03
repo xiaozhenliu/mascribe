@@ -23,7 +23,10 @@
             <span id="tab-label-basic">Basic</span>
           </button>
           <button class="tab-item" data-tab="polish">
-            <span id="tab-label-polish">AI Polish</span>
+            <span id="tab-label-polish">AI Engine</span>
+          </button>
+          <button class="tab-item" data-tab="prompt">
+            <span id="tab-label-prompt">Prompt</span>
           </button>
           <button class="tab-item" data-tab="vision">
             <span id="tab-label-vision">Vision</span>
@@ -68,7 +71,7 @@
             </section>
           </div>
 
-          <!-- Tab: AI Polish -->
+          <!-- Tab: AI Engine -->
           <div class="tab-panel" data-tab="polish">
             <section class="field">
               <label id="label-polish">AI Polishing Engine</label>
@@ -129,6 +132,13 @@
               </p>
             </section>
 
+          </div>
+
+          <!-- Tab: Prompt -->
+          <div class="tab-panel" data-tab="prompt">
+            <p id="prompt-disabled-hint" class="hint hidden" style="margin-bottom: 16px; color: #86868b; font-size: 13px;">
+              Enable AI Polish in the Engine tab first.
+            </p>
             <section id="polish-prompt-section" class="field hidden">
               <label id="label-polish-prompt" for="polish-prompt">AI Polish Prompt</label>
               <p id="hint-polish-prompt" class="hint">
