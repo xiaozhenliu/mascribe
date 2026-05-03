@@ -4,6 +4,11 @@ All notable changes to MaScribe are documented here.
 
 ## Unreleased
 
+## 0.4.1 - 2026-05-03
+
+### Changed
+- Added separator before "Quit" menu item in tray menu to prevent accidental app closure
+
 ## 0.4.0 - 2026-02-17
 
 ### Added

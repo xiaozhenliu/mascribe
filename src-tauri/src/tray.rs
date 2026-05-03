@@ -25,7 +25,7 @@ pub fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>
     let separator = PredefinedMenuItem::separator(app)?;
 
     let menu = MenuBuilder::new(app)
-        .items(&[&launch_at_login, &separator, &settings_item, &quit_item])
+        .items(&[&launch_at_login, &separator, &settings_item, &separator, &quit_item])
         .build()?;
 
     // Use dedicated tray icon (black outline, transparent background)
