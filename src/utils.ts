@@ -78,7 +78,7 @@ export const I18N: Record<UiLang, Record<string, string>> = {
     vision_api_hint: "Using Ollama OCR model (requires Ollama running locally)",
     // Tab labels
     tab_basic: "Basic",
-    tab_polish: "AI Polish",
+    tab_polish: "AI Engine",
     tab_vision: "Vision",
     tab_dictionary: "Dictionary",
     tab_prompt: "Prompt",
@@ -159,7 +159,7 @@ export const I18N: Record<UiLang, Record<string, string>> = {
     vision_api_hint: "使用 Ollama OCR 模型（需要本机启动 Ollama）",
     // Tab labels
     tab_basic: "基础",
-    tab_polish: "AI 润色",
+    tab_polish: "AI 引擎",
     tab_vision: "视觉",
     tab_dictionary: "词典",
     tab_prompt: "提示词",
