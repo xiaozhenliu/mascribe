@@ -142,12 +142,24 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 ## File Organization
 
-Each HTML page has its own TS entry point. No shared modules between pages — keep logic self-contained per page.
+Each HTML page has its own TS entry point. Pure functions are extracted into `src/utils.ts` for testability.
 
 | File | Purpose |
 |------|---------|
 | `src/main.ts` | Main overlay (recording UI, waveform, hotkey) |
-| `src/settings.ts` | Settings window (config editing, corrections) |
+| `src/settings.ts` | Settings window (config editing, corrections, tab switching) |
+| `src/utils.ts` | Shared pure functions: i18n (`t`, `tf`), `mapKey`, `toOllamaTagsUrl`, `I18N` dictionary |
+| `src/utils.test.ts` | Vitest unit tests for utils.ts functions |
+
+**Extracting testable functions**: When a function is pure (no DOM side effects, no Tauri invokes), extract it to `utils.ts` with explicit parameters instead of relying on module-level state. The page module wraps it with local state:
+
+```ts
+// utils.ts — pure, testable
+export function t(key: string, lang: UiLang): string { return I18N[lang][key] || key; }
+
+// settings.ts — wraps with module state
+function t(key: string): string { return utils.t(key, currentUiLang); }
+```
 
 ---
 
