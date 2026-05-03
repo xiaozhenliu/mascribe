@@ -602,7 +602,11 @@ async function testApiConnection() {
   const oldText = btn.textContent || t("test_connection");
   btn.disabled = true;
   btn.textContent = t("testing_connection");
-  hint.textContent = "";
+  hint.textContent = t("testing_connection");
+  hint.style.color = "#666";
+
+  // Force browser to repaint before calling API
+  await new Promise(resolve => requestAnimationFrame(resolve));
 
   try {
     const endpoint = apiEndpoint().value.trim();
