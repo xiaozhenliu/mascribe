@@ -171,6 +171,7 @@ pub fn run() {
             commands::save_corrections,
             commands::register_native_hotkey,
             commands::unregister_native_hotkey,
+            commands::test_online_api_connection,
         ])
         .setup(|app| {
             // Hide from Dock — app lives only in menu bar

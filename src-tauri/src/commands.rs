@@ -622,3 +622,40 @@ fn polish_text_only(
         }
     }
 }
+
+// ── Test API connection command ──
+
+#[derive(serde::Serialize)]
+pub struct TestConnectionResult {
+    success: bool,
+    response_time_ms: u64,
+    error_message: Option<String>,
+}
+
+#[tauri::command]
+pub fn test_online_api_connection(
+    endpoint: String,
+    api_key: String,
+    model: String,
+) -> Result<TestConnectionResult, String> {
+    let start = std::time::Instant::now();
+    let polisher = OnlinePolisher::new(&endpoint, &api_key, &model);
+
+    match polisher.polish("test", "Reply: {text}", "en", None) {
+        Ok(_) => {
+            let elapsed = start.elapsed().as_millis() as u64;
+            Ok(TestConnectionResult {
+                success: true,
+                response_time_ms: elapsed,
+                error_message: None,
+            })
+        }
+        Err(e) => {
+            Ok(TestConnectionResult {
+                success: false,
+                response_time_ms: 0,
+                error_message: Some(e.to_string()),
+            })
+        }
+    }
+}
