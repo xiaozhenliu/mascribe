@@ -44,6 +44,8 @@ const apiModel = () => document.getElementById("api-model") as HTMLInputElement;
 const apiModelSuggestions = () => document.getElementById("api-model-suggestions") as HTMLDataListElement;
 const detectOllamaModelsBtn = () => document.getElementById("detect-ollama-models-btn") as HTMLButtonElement;
 const detectOllamaModelsHint = () => document.getElementById("detect-ollama-models-hint") as HTMLElement;
+const testApiConnectionBtn = () => document.getElementById("test-api-connection-btn") as HTMLButtonElement;
+const testApiConnectionHint = () => document.getElementById("test-api-connection-hint") as HTMLElement;
 const apiSettings = () => document.getElementById("api-settings") as HTMLElement;
 const localPolishSettings = () => document.getElementById("local-polish-settings") as HTMLElement;
 const polishPromptSection = () => document.getElementById("polish-prompt-section") as HTMLElement;
@@ -89,6 +91,10 @@ const I18N: Record<UiLang, Record<string, string>> = {
     detecting_ollama_models: "Detecting...",
     detected_ollama_models: "Detected {count} Ollama models.",
     detect_ollama_models_failed: "Failed to detect Ollama models",
+    test_connection: "Test Connection",
+    testing_connection: "Testing...",
+    connection_success: "✓ Connection successful (response time: {time}ms)",
+    connection_failed: "✗ Connection failed: {error}",
     endpoint: "Endpoint",
     api_key: "API Key",
     model: "Model",
@@ -159,6 +165,10 @@ const I18N: Record<UiLang, Record<string, string>> = {
     detecting_ollama_models: "识别中...",
     detected_ollama_models: "已识别 {count} 个 Ollama 模型。",
     detect_ollama_models_failed: "识别 Ollama 模型失败",
+    test_connection: "测试连接",
+    testing_connection: "测试中...",
+    connection_success: "✓ 连接成功 (响应时间: {time}ms)",
+    connection_failed: "✗ 连接失败: {error}",
     endpoint: "接口地址",
     api_key: "API 密钥",
     model: "模型",
@@ -252,6 +262,7 @@ function applyLanguage() {
   setPlaceholder("polish-model-path", "local_polish_model_path_placeholder");
   setText("polish-model-browse-btn", "browse");
   setText("detect-ollama-models-btn", "detect_ollama_models");
+  setText("test-api-connection-btn", "test_connection");
   setText("api-endpoint-label", "endpoint");
   setText("api-key-label", "api_key");
   setText("api-model-label", "model");
@@ -585,6 +596,51 @@ function setupOllamaModelDetection() {
   });
 }
 
+async function testApiConnection() {
+  const btn = testApiConnectionBtn();
+  const hint = testApiConnectionHint();
+  const oldText = btn.textContent || t("test_connection");
+  btn.disabled = true;
+  btn.textContent = t("testing_connection");
+  hint.textContent = "";
+
+  try {
+    const endpoint = apiEndpoint().value.trim();
+    const key = apiKey().value.trim();
+    const model = apiModel().value.trim();
+
+    if (!endpoint || !key || !model) {
+      throw new Error("Please fill in all API fields");
+    }
+
+    const result = await invoke("test_online_api_connection", {
+      endpoint,
+      apiKey: key,
+      model,
+    }) as { success: boolean; response_time_ms: number; error_message?: string };
+
+    if (result.success) {
+      hint.textContent = tf("connection_success", { time: result.response_time_ms });
+      hint.style.color = "#4caf50";
+    } else {
+      hint.textContent = tf("connection_failed", { error: result.error_message || "Unknown error" });
+      hint.style.color = "#f44336";
+    }
+  } catch (e) {
+    hint.textContent = tf("connection_failed", { error: String(e) });
+    hint.style.color = "#f44336";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+function setupApiConnectionTest() {
+  testApiConnectionBtn().addEventListener("click", () => {
+    void testApiConnection();
+  });
+}
+
 // ── Screenshot mode ──
 
 /** Get current screenshot mode from radio buttons */
@@ -885,6 +941,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   applyLanguage();
   setupPolishRadios();
   setupOllamaModelDetection();
+  setupApiConnectionTest();
   setupScreenshotRadios();
   setupVisionRadios();
   await loadConfig();
