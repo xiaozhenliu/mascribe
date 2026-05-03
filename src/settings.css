@@ -154,14 +154,17 @@ body {
   display: flex;
   gap: 0;
   border: 1px solid #d2d2d7;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
   background: #fff;
+  align-items: stretch;
 }
 
 .radio-label {
   flex: 1;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -246,7 +249,7 @@ body {
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  width: 90px;
+  min-width: 120px;
   text-align: center;
   transition: background 0.15s;
 }
