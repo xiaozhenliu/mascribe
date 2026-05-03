@@ -603,10 +603,10 @@ async function testApiConnection() {
   btn.disabled = true;
   btn.textContent = t("testing_connection");
   hint.textContent = t("testing_connection");
-  hint.style.color = "#666";
+  hint.style.color = "#aaa";
 
-  // Force browser to repaint before calling API
-  await new Promise(resolve => requestAnimationFrame(resolve));
+  // Push invoke to next macrotask so WKWebView renders the DOM update first
+  await new Promise(resolve => setTimeout(resolve, 0));
 
   try {
     const endpoint = apiEndpoint().value.trim();
@@ -634,6 +634,7 @@ async function testApiConnection() {
     hint.textContent = tf("connection_failed", { error: String(e) });
     hint.style.color = "#f44336";
   } finally {
+    await new Promise(resolve => setTimeout(resolve, 300));
     btn.disabled = false;
     btn.textContent = oldText;
   }
