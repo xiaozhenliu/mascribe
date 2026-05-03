@@ -413,9 +413,16 @@ textarea {
 select.btn-small {
   appearance: none;
   -webkit-appearance: none;
+  text-align: center;
+  text-align-last: center;
   padding-right: 12px;
   color: #6e6e73;
-  font-weight: 500;
+  border-color: #d2d2d7;
+  background: #fff;
+}
+
+select.btn-small:hover {
+  background: #e8e8ed;
 }
 
 .btn {

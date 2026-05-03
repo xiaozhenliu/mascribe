@@ -423,7 +423,7 @@ function setupOllamaModelDetection() {
 function setupApiGuide() {
   apiGuideBtn().addEventListener("click", async () => {
     const lang = currentUiLang === "zh" ? "zh" : "en";
-    const url = `https://github.com/user/mascribe/blob/main/docs/online-api-guide-${lang}.md`;
+    const url = `https://github.com/xz/Projects/mascribe/blob/main/docs/online-api-guide-${lang}.md`;
     try {
       const { openUrl } = await import("@tauri-apps/plugin-opener");
       await openUrl(url);
